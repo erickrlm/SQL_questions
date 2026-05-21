@@ -17,6 +17,8 @@ MIME_TYPES = {
     ".svg": "image/svg+xml",
 }
 
+class ReusableHTTPServer(HTTPServer):
+    allow_reuse_address = True
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
@@ -122,8 +124,16 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     database.init_db()
     database.seed_questions()
+    server = ReusableHTTPServer(("0.0.0.0", PORT), Handler)
     print(f"Serving on http://0.0.0.0:{PORT}")
-    HTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
+
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nShutting down server gracefully...")
+    finally:
+        server.server_close()
+        print("Server stopped.")
 
 
 if __name__ == "__main__":
