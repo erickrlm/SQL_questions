@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sqlite3 --version)",
+      "Bash(python3 -c \"import sqlite3; print\\('sqlite3:', sqlite3.sqlite_version\\)\")",
+      "Bash(python3 -m pip --version)",
+      "Bash(python3 -m ensurepip --version)",
+      "Bash(apt list *)",
+      "Bash(dpkg -l python3-pip)",
+      "Bash(python3 -m pip)",
+      "Bash(sudo apt-get *)",
+      "Bash(python3 server.py)",
+      "Bash(python3 -c \"import json, urllib.request; data = urllib.request.urlopen\\('http://localhost:8080/api/questions'\\).read\\(\\); qs = json.loads\\(data\\); print\\(f'{len\\(qs\\)} questions loaded'\\); print\\(f'First: {qs[0][\\\\\"prompt\\\\\"][:60]}...'\\)\")",
+      "Bash(python3 -c \"import json, urllib.request; data = urllib.request.urlopen\\('http://localhost:8080/api/progress/stats'\\).read\\(\\); print\\(json.dumps\\(json.loads\\(data\\), indent=2\\)\\)\")",
+      "Bash(python3 -c \"import json, urllib.request; data = urllib.request.urlopen\\('http://localhost:8080/api/topics'\\).read\\(\\); print\\(json.dumps\\(json.loads\\(data\\), indent=2\\)\\)\")",
+      "Bash(python3 -c \"import json, urllib.request; data = urllib.request.urlopen\\('http://localhost:8080/api/questions/q005'\\).read\\(\\); q = json.loads\\(data\\); print\\(f'ID: {q[\\\\\"id\\\\\"]}, Prompt: {q[\\\\\"prompt\\\\\"][:60]}...'\\)\")",
+      "Bash(sqlite3 *)"
+    ]
+  }
+}

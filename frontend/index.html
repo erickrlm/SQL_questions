@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SQL Prep</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<header>
+  <h1>SQL Prep</h1>
+  <nav>
+    <button data-view="practice" class="active">Practice</button>
+    <button data-view="stats">Stats</button>
+    <button data-view="questions">Questions</button>
+  </nav>
+  <button id="theme-toggle" title="Toggle theme">&#9681;</button>
+</header>
+
+<main>
+  <!-- ── Practice View ─────────────────────────────── -->
+  <section id="view-practice" class="view active">
+    <div id="practice-controls">
+      <select id="filter-difficulty">
+        <option value="">All difficulties</option>
+        <option value="easy">Easy</option>
+        <option value="medium">Medium</option>
+        <option value="hard">Hard</option>
+      </select>
+      <select id="filter-topic">
+        <option value="">All topics</option>
+      </select>
+      <button id="btn-random">Random Question</button>
+    </div>
+
+    <div id="question-container" class="card">
+      <div class="question-meta">
+        <span id="q-difficulty" class="badge"></span>
+        <span id="q-topic" class="badge"></span>
+        <span id="q-category" class="badge"></span>
+      </div>
+      <p id="q-prompt"></p>
+      <div id="q-choices"></div>
+      <div id="q-feedback" class="hidden"></div>
+      <div id="q-confidence" class="hidden">
+        <span>Confidence:</span>
+        <button data-confidence="low">Low</button>
+        <button data-confidence="medium">Medium</button>
+        <button data-confidence="high">High</button>
+      </div>
+      <button id="btn-next" class="hidden">Next Question</button>
+    </div>
+
+    <div id="practice-empty" class="card empty-state hidden">
+      <p>No questions match the current filters.</p>
+    </div>
+  </section>
+
+  <!-- ── Stats View ────────────────────────────────── -->
+  <section id="view-stats" class="view">
+    <div class="stats-grid">
+      <div class="card stat-card">
+        <div class="stat-value" id="stat-accuracy">--</div>
+        <div class="stat-label">Accuracy</div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-value" id="stat-total">--</div>
+        <div class="stat-label">Questions Answered</div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-value" id="stat-correct">--</div>
+        <div class="stat-label">Correct</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>By Topic</h3>
+      <div id="stats-by-topic"></div>
+    </div>
+
+    <div class="card">
+      <h3>By Difficulty</h3>
+      <div id="stats-by-difficulty"></div>
+    </div>
+
+    <div class="card">
+      <h3>Recent Activity</h3>
+      <div id="stats-recent"></div>
+    </div>
+  </section>
+
+  <!-- ── Questions View ───────────────────────────── -->
+  <section id="view-questions" class="view">
+    <div id="questions-filters">
+      <select id="qlist-difficulty">
+        <option value="">All difficulties</option>
+        <option value="easy">Easy</option>
+        <option value="medium">Medium</option>
+        <option value="hard">Hard</option>
+      </select>
+      <select id="qlist-topic">
+        <option value="">All topics</option>
+      </select>
+      <select id="qlist-category">
+        <option value="">All categories</option>
+      </select>
+    </div>
+    <div id="questions-list"></div>
+  </section>
+</main>
+
+<script src="/app.js"></script>
+</body>
+</html>

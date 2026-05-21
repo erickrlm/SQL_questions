@@ -1,0 +1,306 @@
+// ── State ─────────────────────────────────────────────
+let currentQuestions = [];
+let currentIndex = 0;
+let questionStartTime = null;
+let answered = false;
+let selectedConfidence = null;
+
+// ── API ───────────────────────────────────────────────
+async function api(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: { "Content-Type": "application/json" },
+    ...opts,
+  });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  return res.json();
+}
+
+// ── Navigation ────────────────────────────────────────
+document.querySelectorAll("nav button").forEach(btn => {
+  btn.addEventListener("click", () => switchView(btn.dataset.view));
+});
+
+function switchView(name) {
+  document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
+  document.querySelector(`nav button[data-view="${name}"]`).classList.add("active");
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+  document.getElementById(`view-${name}`).classList.add("active");
+  if (name === "stats") loadStats();
+  if (name === "questions") loadQuestionList();
+}
+
+// ── Theme ─────────────────────────────────────────────
+const themeToggle = document.getElementById("theme-toggle");
+themeToggle.addEventListener("click", () => {
+  const html = document.documentElement;
+  const next = html.dataset.theme === "dark" ? "light" : "dark";
+  html.dataset.theme = next;
+  localStorage.setItem("theme", next);
+  themeToggle.textContent = next === "dark" ? "◐" : "◑";
+});
+
+const savedTheme = localStorage.getItem("theme") || "dark";
+document.documentElement.dataset.theme = savedTheme;
+themeToggle.textContent = savedTheme === "dark" ? "◐" : "◑";
+
+// ── Filters ───────────────────────────────────────────
+async function loadTopics() {
+  const data = await api("/api/topics");
+  const topicSelects = ["filter-topic", "qlist-topic"];
+  const categorySelects = ["qlist-category"];
+
+  topicSelects.forEach(id => {
+    const sel = document.getElementById(id);
+    data.topics.forEach(t => { const o = document.createElement("option"); o.value = t; o.textContent = t; sel.appendChild(o); });
+  });
+  categorySelects.forEach(id => {
+    const sel = document.getElementById(id);
+    data.categories.forEach(c => { const o = document.createElement("option"); o.value = c; o.textContent = c; sel.appendChild(o); });
+  });
+}
+
+// ── Practice ──────────────────────────────────────────
+document.getElementById("filter-difficulty").addEventListener("change", loadRandomQuestion);
+document.getElementById("filter-topic").addEventListener("change", loadRandomQuestion);
+document.getElementById("btn-random").addEventListener("click", loadRandomQuestion);
+document.getElementById("btn-next").addEventListener("click", loadRandomQuestion);
+
+async function loadRandomQuestion() {
+  const difficulty = document.getElementById("filter-difficulty").value;
+  const topic = document.getElementById("filter-topic").value;
+
+  const params = new URLSearchParams();
+  if (difficulty) params.set("difficulty", difficulty);
+  if (topic) params.set("topic", topic);
+
+  const qs = await api(`/api/questions?${params}`);
+  currentQuestions = qs;
+
+  if (qs.length === 0) {
+    document.getElementById("question-container").classList.add("hidden");
+    document.getElementById("practice-empty").classList.remove("hidden");
+    return;
+  }
+
+  document.getElementById("question-container").classList.remove("hidden");
+  document.getElementById("practice-empty").classList.add("hidden");
+  currentIndex = Math.floor(Math.random() * qs.length);
+  renderQuestion(qs[currentIndex]);
+}
+
+function renderQuestion(q) {
+  answered = false;
+  selectedConfidence = null;
+  questionStartTime = Date.now();
+
+  document.getElementById("q-difficulty").textContent = q.difficulty;
+  document.getElementById("q-topic").textContent = q.topic;
+  document.getElementById("q-category").textContent = q.category;
+  document.getElementById("q-prompt").textContent = q.prompt;
+
+  const choicesDiv = document.getElementById("q-choices");
+  choicesDiv.innerHTML = "";
+
+  const choices = JSON.parse(q.choices);
+  const keys = ["A", "B", "C", "D", "E", "F"];
+
+  choices.forEach((choice, i) => {
+    const btn = document.createElement("button");
+    btn.className = "choice-btn";
+    btn.innerHTML = `<span class="choice-key">${keys[i]}</span>${choice}`;
+    btn.addEventListener("click", () => submitAnswer(q, choice, i));
+    choicesDiv.appendChild(btn);
+  });
+
+  document.getElementById("q-feedback").classList.add("hidden");
+  document.getElementById("q-confidence").classList.add("hidden");
+  document.getElementById("btn-next").classList.add("hidden");
+
+  document.querySelectorAll("#q-confidence button").forEach(b => b.classList.remove("selected"));
+}
+
+async function submitAnswer(q, userAnswer, choiceIndex) {
+  if (answered) return;
+  answered = true;
+
+  const responseTime = Date.now() - questionStartTime;
+  const correct = userAnswer === q.correct_answer;
+
+  await api("/api/progress", {
+    method: "POST",
+    body: JSON.stringify({
+      question_id: q.id,
+      correct,
+      user_answer: userAnswer,
+      response_time_ms: responseTime,
+      confidence: null,
+    }),
+  });
+
+  // Show result
+  const choices = JSON.parse(q.choices);
+  const correctIdx = choices.indexOf(q.correct_answer);
+  const buttons = document.querySelectorAll(".choice-btn");
+
+  buttons.forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === correctIdx) btn.classList.add("correct");
+    if (i === choiceIndex && !correct) btn.classList.add("incorrect");
+  });
+
+  const feedback = document.getElementById("q-feedback");
+  feedback.classList.remove("hidden", "correct", "incorrect");
+  feedback.classList.add(correct ? "correct" : "incorrect");
+  feedback.innerHTML = `
+    <div class="result-label">${correct ? "Correct" : "Incorrect"}</div>
+    <p>${q.explanation}</p>
+  `;
+
+  document.getElementById("q-confidence").classList.remove("hidden");
+  document.getElementById("btn-next").classList.remove("hidden");
+  document.getElementById("btn-next").focus();
+}
+
+// ── Confidence ────────────────────────────────────────
+document.querySelectorAll("#q-confidence button").forEach(btn => {
+  btn.addEventListener("click", async () => {
+    document.querySelectorAll("#q-confidence button").forEach(b => b.classList.remove("selected"));
+    btn.classList.add("selected");
+    selectedConfidence = btn.dataset.confidence;
+
+    const q = currentQuestions[currentIndex];
+    await api("/api/progress", {
+      method: "POST",
+      body: JSON.stringify({
+        question_id: q.id,
+        correct: null,
+        user_answer: "",
+        confidence: selectedConfidence,
+      }),
+    });
+  });
+});
+
+// ── Keyboard ──────────────────────────────────────────
+document.addEventListener("keydown", (e) => {
+  if (e.target.tagName === "SELECT") return;
+
+  // View switching
+  if (e.key === "1" && !e.ctrlKey && !e.metaKey) switchView("practice");
+  if (e.key === "2" && !e.ctrlKey && !e.metaKey) switchView("stats");
+  if (e.key === "3" && !e.ctrlKey && !e.metaKey) switchView("questions");
+
+  // Question answering (A-D keys)
+  if (!answered && currentQuestions.length > 0) {
+    const keys = ["a", "b", "c", "d", "e", "f"];
+    const idx = keys.indexOf(e.key.toLowerCase());
+    if (idx >= 0) {
+      const buttons = document.querySelectorAll(".choice-btn");
+      if (buttons[idx]) buttons[idx].click();
+    }
+  }
+
+  // Next question
+  if (e.key === "Enter" && answered) {
+    loadRandomQuestion();
+  }
+
+  // Random question shortcut
+  if (e.key === "r" && e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    loadRandomQuestion();
+  }
+});
+
+// ── Stats ─────────────────────────────────────────────
+async function loadStats() {
+  const stats = await api("/api/progress/stats");
+
+  document.getElementById("stat-accuracy").textContent = stats.accuracy + "%";
+  document.getElementById("stat-total").textContent = stats.total_answered;
+  document.getElementById("stat-correct").textContent = stats.total_correct;
+
+  renderStatBars("stats-by-topic", stats.by_topic, "topic");
+  renderStatBars("stats-by-difficulty", stats.by_difficulty, "difficulty");
+  renderRecent(stats.recent);
+}
+
+function renderStatBars(containerId, items, labelKey) {
+  const container = document.getElementById(containerId);
+  if (items.length === 0) {
+    container.innerHTML = '<p style="color:var(--text-secondary)">No data yet</p>';
+    return;
+  }
+  container.innerHTML = items.map(item => {
+    const pct = item.accuracy;
+    const cls = pct >= 80 ? "high" : pct >= 50 ? "mid" : "low";
+    return `
+      <div class="stat-row">
+        <span class="label">${item[labelKey]}</span>
+        <div class="bar-bg"><div class="bar-fill ${cls}" style="width:${pct}%"></div></div>
+        <span class="pct">${pct}%</span>
+      </div>`;
+  }).join("");
+}
+
+function renderRecent(items) {
+  const container = document.getElementById("stats-recent");
+  if (items.length === 0) {
+    container.innerHTML = '<p style="color:var(--text-secondary)">No activity yet</p>';
+    return;
+  }
+  container.innerHTML = items.map(r => `
+    <div class="recent-row">
+      <span class="icon">${r.correct ? "✓" : "✗"}</span>
+      <span class="topic">${r.topic} (${r.difficulty})</span>
+      <span class="date">${r.completed_at.slice(0, 16).replace("T", " ")}</span>
+    </div>
+  `).join("");
+}
+
+// ── Question List ─────────────────────────────────────
+document.getElementById("qlist-difficulty").addEventListener("change", loadQuestionList);
+document.getElementById("qlist-topic").addEventListener("change", loadQuestionList);
+document.getElementById("qlist-category").addEventListener("change", loadQuestionList);
+
+async function loadQuestionList() {
+  const params = new URLSearchParams();
+  const difficulty = document.getElementById("qlist-difficulty").value;
+  const topic = document.getElementById("qlist-topic").value;
+  const category = document.getElementById("qlist-category").value;
+  if (difficulty) params.set("difficulty", difficulty);
+  if (topic) params.set("topic", topic);
+  if (category) params.set("category", category);
+
+  const qs = await api(`/api/questions?${params}`);
+  const container = document.getElementById("questions-list");
+
+  if (qs.length === 0) {
+    container.innerHTML = '<div class="card empty-state"><p>No questions match.</p></div>';
+    return;
+  }
+
+  container.innerHTML = qs.map(q => `
+    <div class="question-row" data-id="${q.id}">
+      <span class="q-prompt">${q.prompt}</span>
+      <span class="q-meta">
+        <span class="badge">${q.difficulty}</span>
+        <span class="badge">${q.topic}</span>
+      </span>
+    </div>
+  `).join("");
+
+  container.querySelectorAll(".question-row").forEach(row => {
+    row.addEventListener("click", async () => {
+      const q = await api(`/api/questions/${row.dataset.id}`);
+      currentQuestions = [q];
+      currentIndex = 0;
+      switchView("practice");
+      renderQuestion(q);
+    });
+  });
+}
+
+// ── Init ──────────────────────────────────────────────
+loadTopics();
+loadRandomQuestion();

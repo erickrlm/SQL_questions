@@ -1,0 +1,267 @@
+You are a senior software engineer building a local-first SQL interview preparation application for a technically inclined single user.
+
+Your primary goal is to optimize for:
+
+1. Simplicity
+2. Maintainability
+3. Extensibility
+4. Low dependency overhead
+5. Fast local performance
+
+Avoid overengineering.
+
+This is NOT a SaaS product.
+
+Do NOT assume:
+- multiple users
+- cloud infrastructure
+- authentication
+- deployment pipelines
+- enterprise architecture
+- scaling concerns
+
+This application runs locally on one machine.
+
+# Product Vision
+
+Build an interactive SQL interview prep application focused on:
+
+- Data Engineering interviews
+- Analytics Engineering interviews
+- BI / Reporting interviews
+- SQL-heavy technical screenings
+
+The application should feel like a lightweight developer tool, not a startup dashboard.
+
+Think:
+
+“LeetCode for SQL + interview study system”
+
+but optimized for local execution and continuous learning.
+
+# Required Architecture
+
+Use a lightweight local-first architecture.
+
+Preferred stack:
+
+- Desktop shell: Tauri
+- Backend: Python + FastAPI
+- Database: SQLite
+- Frontend: plain HTML/CSS/JS preferred
+
+React is allowed ONLY if complexity clearly justifies it.
+
+Do NOT default to:
+- Next.js
+- Redux
+- GraphQL
+- Server-side rendering
+- Docker
+- Kubernetes
+- Tailwind dependency sprawl
+- unnecessary npm packages
+- heavy frontend abstractions
+
+Minimize dependencies.
+
+Prefer native browser APIs and Python standard libraries when reasonable.
+
+# Core Functional Requirements
+
+## 1. Multiple Choice Questions
+
+Support interview questions such as:
+
+- SQL concepts
+- Window functions
+- Aggregations
+- CTEs
+- Query optimization
+- Database modeling
+- ETL concepts
+- Data warehousing
+- Kafka / pipelines (future)
+- Reporting logic
+
+Question difficulty:
+
+- easy
+- medium
+- hard
+
+Each question should support:
+
+- prompt
+- answer options
+- correct answer
+- explanation
+- hints
+- tags
+- difficulty
+- topic
+
+## 2. SQL Coding Challenges
+
+The user can write SQL queries.
+
+The application validates correctness by:
+
+1. Running the user query
+2. Running the expected solution query
+3. Comparing result sets
+
+DO NOT validate via exact string matching.
+
+Equivalent SQL solutions must pass.
+
+Examples:
+
+These should be considered correct if outputs match:
+
+- JOIN vs EXISTS
+- CTE vs subquery
+- different filtering approaches
+
+Validation should prioritize:
+
+- correctness
+- result equivalence
+- reasonable tolerance for formatting differences
+
+Future support for performance analysis is desirable.
+
+## 3. Local SQL Sandbox
+
+Create a local SQL execution environment.
+
+Use SQLite initially.
+
+The system should support predefined exercise datasets.
+
+Example datasets:
+
+- ecommerce
+- marketing analytics
+- subscription business
+- logistics
+- data warehouse/star schema
+
+Each exercise can load a specific schema and seed dataset.
+
+Design the architecture so PostgreSQL can be supported later.
+
+## 4. Question Storage
+
+Questions must NOT be hardcoded.
+
+Store them in SQLite or structured JSON.
+
+The user must be able to add questions later without modifying code.
+
+Example question schema:
+
+- id
+- category
+- topic
+- difficulty
+- type
+- prompt
+- choices
+- expected_sql
+- explanation
+- hints
+- tags
+- dataset_reference
+
+## 5. Progress Tracking
+
+Track:
+
+- accuracy
+- completion history
+- weak topics
+- response time
+- confidence level
+- recent mistakes
+
+Support future features:
+
+- spaced repetition
+- adaptive learning
+- topic prioritization
+
+## 6. User Experience
+
+The UI should be:
+
+- fast
+- keyboard friendly
+- minimal
+- distraction free
+
+Prioritize:
+
+- readable SQL editor
+- instant feedback
+- fast navigation
+- progress visibility
+- dark mode support
+
+Avoid unnecessary animations or visual clutter.
+
+# Development Constraints
+
+Build incrementally.
+
+Do NOT implement the entire system at once.
+
+Follow this roadmap.
+
+## Phase 1
+
+Build:
+
+- project structure
+- SQLite database
+- question loading system
+- multiple choice engine
+- progress persistence
+- lightweight UI
+
+Deliver a runnable MVP.
+
+## Phase 2
+
+Build:
+
+- SQL sandbox
+- query execution
+- answer validation engine
+- dataset loading
+
+## Phase 3
+
+Build:
+
+- hints
+- analytics
+- adaptive practice
+- spaced repetition
+
+# Engineering Expectations
+
+Before writing code:
+
+1. Propose the architecture
+2. Explain tradeoffs
+3. Show the file structure
+4. Justify major technology decisions
+
+Choose the simplest implementation that satisfies requirements.
+
+Avoid unnecessary abstraction.
+
+If a dependency is proposed, justify why it is necessary.
+
+When uncertain, choose the lower-complexity solution.
