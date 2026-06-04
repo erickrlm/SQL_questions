@@ -4,6 +4,7 @@ let currentIndex = 0;
 let questionStartTime = null;
 let answered = false;
 let selectedConfidence = null;
+let currentCodeQuestion = null;
 
 // ── API ───────────────────────────────────────────────
 async function api(url, opts = {}) {
@@ -27,6 +28,7 @@ function switchView(name) {
   document.getElementById(`view-${name}`).classList.add("active");
   if (name === "stats") loadStats();
   if (name === "questions") loadQuestionList();
+  if (name === "code") loadRandomCodeQuestion();
 }
 
 // ── Theme ─────────────────────────────────────────────
@@ -46,7 +48,7 @@ themeToggle.textContent = savedTheme === "dark" ? "◐" : "◑";
 // ── Filters ───────────────────────────────────────────
 async function loadTopics() {
   const data = await api("/api/topics");
-  const topicSelects = ["filter-topic", "qlist-topic"];
+  const topicSelects = ["filter-topic", "qlist-topic", "code-filter-topic"];
   const categorySelects = ["qlist-category"];
 
   topicSelects.forEach(id => {
@@ -70,6 +72,7 @@ async function loadRandomQuestion() {
   const topic = document.getElementById("filter-topic").value;
 
   const params = new URLSearchParams();
+  params.set("type", "multiple_choice");
   if (difficulty) params.set("difficulty", difficulty);
   if (topic) params.set("topic", topic);
 
@@ -183,15 +186,24 @@ document.querySelectorAll("#q-confidence button").forEach(btn => {
 
 // ── Keyboard ──────────────────────────────────────────
 document.addEventListener("keydown", (e) => {
-  if (e.target.tagName === "SELECT") return;
+  // Ctrl+Enter to run query in code editor
+  if (e.ctrlKey && e.key === "Enter" && e.target.id === "code-sql-editor") {
+    e.preventDefault();
+    if (typeof runCodeQuery === "function") runCodeQuery();
+    return;
+  }
+
+  if (e.target.tagName === "SELECT" || e.target.tagName === "TEXTAREA") return;
 
   // View switching
   if (e.key === "1" && !e.ctrlKey && !e.metaKey) switchView("practice");
   if (e.key === "2" && !e.ctrlKey && !e.metaKey) switchView("stats");
   if (e.key === "3" && !e.ctrlKey && !e.metaKey) switchView("questions");
+  if (e.key === "4" && !e.ctrlKey && !e.metaKey) switchView("code");
 
-  // Question answering (A-D keys)
-  if (!answered && currentQuestions.length > 0) {
+  // Question answering (A-D keys) — only when Practice view is active
+  const isPracticeActive = document.getElementById("view-practice").classList.contains("active");
+  if (!answered && currentQuestions.length > 0 && isPracticeActive) {
     const keys = ["a", "b", "c", "d", "e", "f"];
     const idx = keys.indexOf(e.key.toLowerCase());
     if (idx >= 0) {
@@ -299,6 +311,203 @@ async function loadQuestionList() {
       renderQuestion(q);
     });
   });
+}
+
+// ── Code View ──────────────────────────────────────────
+document.getElementById("code-filter-difficulty").addEventListener("change", loadRandomCodeQuestion);
+document.getElementById("code-filter-topic").addEventListener("change", loadRandomCodeQuestion);
+document.getElementById("code-btn-random").addEventListener("click", loadRandomCodeQuestion);
+document.getElementById("code-btn-next").addEventListener("click", loadRandomCodeQuestion);
+document.getElementById("code-btn-run").addEventListener("click", runCodeQuery);
+document.getElementById("code-btn-submit").addEventListener("click", submitCodeAnswer);
+document.getElementById("code-btn-clear").addEventListener("click", clearCodeEditor);
+
+// Schema toggle
+document.getElementById("code-schema-toggle").addEventListener("click", () => {
+  const content = document.getElementById("code-schema-content");
+  const arrow = document.querySelector("#code-schema-toggle .panel-arrow");
+  const hidden = content.classList.toggle("hidden");
+  arrow.textContent = hidden ? "Show" : "Hide";
+});
+
+// Code confidence
+document.querySelectorAll("#code-confidence button").forEach(btn => {
+  btn.addEventListener("click", async () => {
+    document.querySelectorAll("#code-confidence button").forEach(b => b.classList.remove("selected"));
+    btn.classList.add("selected");
+    await api("/api/progress", {
+      method: "POST",
+      body: JSON.stringify({
+        question_id: currentCodeQuestion.id,
+        correct: null,
+        user_answer: "",
+        confidence: btn.dataset.confidence,
+      }),
+    });
+  });
+});
+
+async function loadRandomCodeQuestion() {
+  const difficulty = document.getElementById("code-filter-difficulty").value;
+  const topic = document.getElementById("code-filter-topic").value;
+
+  const params = new URLSearchParams();
+  params.set("type", "coding");
+  if (difficulty) params.set("difficulty", difficulty);
+  if (topic) params.set("topic", topic);
+
+  const qs = await api(`/api/questions?${params}`);
+
+  if (qs.length === 0) {
+    document.getElementById("code-question-container").classList.add("hidden");
+    document.getElementById("code-empty").classList.remove("hidden");
+    return;
+  }
+
+  document.getElementById("code-question-container").classList.remove("hidden");
+  document.getElementById("code-empty").classList.add("hidden");
+
+  const q = qs[Math.floor(Math.random() * qs.length)];
+  const fullQ = await api(`/api/code/questions/${q.id}`);
+  currentCodeQuestion = fullQ;
+  renderCodeQuestion(fullQ);
+}
+
+function renderCodeQuestion(q) {
+  document.getElementById("code-q-difficulty").textContent = q.difficulty;
+  document.getElementById("code-q-topic").textContent = q.topic;
+  document.getElementById("code-q-category").textContent = q.category;
+  document.getElementById("code-q-prompt").textContent = q.prompt;
+
+  // Schema display
+  const schemaContent = document.getElementById("code-schema-content");
+  schemaContent.textContent = q.dataset_schema || "No schema available";
+  schemaContent.classList.remove("hidden");
+  document.querySelector("#code-schema-toggle .panel-arrow").textContent = "Hide";
+
+  // Clear editor
+  document.getElementById("code-sql-editor").value = "";
+
+  // Hide results, error, feedback, confidence, next
+  document.getElementById("code-results").classList.add("hidden");
+  document.getElementById("code-error").classList.add("hidden");
+  document.getElementById("code-feedback").classList.add("hidden");
+  document.getElementById("code-confidence").classList.add("hidden");
+  document.getElementById("code-btn-next").classList.add("hidden");
+  document.getElementById("code-btn-submit").disabled = false;
+  document.getElementById("code-btn-run").disabled = false;
+
+  document.getElementById("code-sql-editor").focus();
+}
+
+async function runCodeQuery() {
+  if (!currentCodeQuestion) return;
+
+  const query = document.getElementById("code-sql-editor").value.trim();
+  if (!query) return;
+
+  document.getElementById("code-error").classList.add("hidden");
+  document.getElementById("code-results").classList.add("hidden");
+  document.getElementById("code-feedback").classList.add("hidden");
+
+  const result = await api("/api/code/execute", {
+    method: "POST",
+    body: JSON.stringify({
+      question_id: currentCodeQuestion.id,
+      query: query,
+    }),
+  });
+
+  if (result.error) {
+    document.getElementById("code-error").textContent = result.error;
+    document.getElementById("code-error").classList.remove("hidden");
+    return;
+  }
+
+  renderResultsTable(result.columns, result.rows, result.row_count, result.truncated);
+}
+
+function renderResultsTable(columns, rows, rowCount, truncated) {
+  const resultsDiv = document.getElementById("code-results");
+  resultsDiv.classList.remove("hidden");
+
+  document.getElementById("code-row-count").textContent =
+    `${rowCount} row${rowCount !== 1 ? "s" : ""}${truncated ? " (truncated)" : ""}`;
+
+  const thead = document.getElementById("code-results-thead");
+  const tbody = document.getElementById("code-results-tbody");
+
+  thead.innerHTML = `<tr>${columns.map(c => `<th>${escapeHtml(c)}</th>`).join("")}</tr>`;
+
+  if (rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="${columns.length}" style="text-align:center;color:var(--text-secondary)">No rows returned</td></tr>`;
+  } else {
+    tbody.innerHTML = rows.map(row =>
+      `<tr>${row.map(cell =>
+        `<td>${cell === null ? '<span class="null-value">NULL</span>' : escapeHtml(String(cell))}</td>`
+      ).join("")}</tr>`
+    ).join("");
+  }
+}
+
+async function submitCodeAnswer() {
+  if (!currentCodeQuestion) return;
+
+  const query = document.getElementById("code-sql-editor").value.trim();
+  if (!query) return;
+
+  document.getElementById("code-btn-submit").disabled = true;
+  document.getElementById("code-error").classList.add("hidden");
+
+  const result = await api("/api/code/submit", {
+    method: "POST",
+    body: JSON.stringify({
+      question_id: currentCodeQuestion.id,
+      query: query,
+    }),
+  });
+
+  const feedback = document.getElementById("code-feedback");
+  feedback.classList.remove("hidden", "correct", "incorrect");
+
+  if (result.match) {
+    feedback.classList.add("correct");
+    feedback.innerHTML = `
+      <div class="result-label">Correct</div>
+      <p>Your query produced the expected result.</p>
+      <p>${currentCodeQuestion.explanation}</p>
+    `;
+  } else {
+    feedback.classList.add("incorrect");
+    let detail = result.details || "Your result did not match the expected output.";
+    if (result.error) detail = result.error;
+    feedback.innerHTML = `
+      <div class="result-label">Incorrect</div>
+      <p>${detail}</p>
+    `;
+  }
+
+  document.getElementById("code-confidence").classList.remove("hidden");
+  document.getElementById("code-btn-next").classList.remove("hidden");
+  document.getElementById("code-btn-next").focus();
+}
+
+function clearCodeEditor() {
+  document.getElementById("code-sql-editor").value = "";
+  document.getElementById("code-results").classList.add("hidden");
+  document.getElementById("code-error").classList.add("hidden");
+  document.getElementById("code-feedback").classList.add("hidden");
+  document.getElementById("code-confidence").classList.add("hidden");
+  document.getElementById("code-btn-next").classList.add("hidden");
+  document.getElementById("code-btn-submit").disabled = false;
+  document.getElementById("code-btn-run").disabled = false;
+  document.getElementById("code-sql-editor").focus();
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
 }
 
 // ── Init ──────────────────────────────────────────────

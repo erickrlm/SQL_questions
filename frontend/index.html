@@ -13,6 +13,7 @@
   <nav>
     <button data-view="practice" class="active">Practice</button>
     <button data-view="stats">Stats</button>
+    <button data-view="code">Code</button>
     <button data-view="questions">Questions</button>
   </nav>
   <button id="theme-toggle" title="Toggle theme">&#9681;</button>
@@ -108,6 +109,79 @@
     </div>
     <div id="questions-list"></div>
   </section>
+
+  <!-- ── Code View ─────────────────────────────────── -->
+  <section id="view-code" class="view">
+    <div id="code-controls">
+      <select id="code-filter-difficulty">
+        <option value="">All difficulties</option>
+        <option value="easy">Easy</option>
+        <option value="medium">Medium</option>
+        <option value="hard">Hard</option>
+      </select>
+      <select id="code-filter-topic">
+        <option value="">All topics</option>
+      </select>
+      <button id="code-btn-random">Random Question</button>
+    </div>
+
+    <div id="code-question-container" class="card">
+      <div class="question-meta">
+        <span id="code-q-difficulty" class="badge"></span>
+        <span id="code-q-topic" class="badge"></span>
+        <span id="code-q-category" class="badge"></span>
+      </div>
+      <p id="code-q-prompt"></p>
+
+      <div id="code-schema-panel">
+        <div class="panel-header" id="code-schema-toggle">
+          <span>Schema</span>
+          <span class="panel-arrow">Hide</span>
+        </div>
+        <pre id="code-schema-content"></pre>
+      </div>
+
+      <div id="code-editor-area">
+        <textarea id="code-sql-editor" spellcheck="false"
+                  placeholder="Write your SQL query here. Press Ctrl+Enter to run."
+                  rows="8"></textarea>
+      </div>
+
+      <div id="code-actions">
+        <button id="code-btn-run" class="btn-primary">Run</button>
+        <button id="code-btn-submit" class="btn-success">Submit</button>
+        <button id="code-btn-clear" class="btn-secondary">Clear</button>
+      </div>
+
+      <div id="code-error" class="code-error hidden"></div>
+
+      <div id="code-results" class="hidden">
+        <h4>Query Results <span id="code-row-count"></span></h4>
+        <div id="code-results-table-wrapper">
+          <table id="code-results-table">
+            <thead id="code-results-thead"></thead>
+            <tbody id="code-results-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="code-feedback" class="hidden"></div>
+
+      <div id="code-confidence" class="hidden">
+        <span>Confidence:</span>
+        <button data-confidence="low">Low</button>
+        <button data-confidence="medium">Medium</button>
+        <button data-confidence="high">High</button>
+      </div>
+
+      <button id="code-btn-next" class="hidden">Next Question</button>
+    </div>
+
+    <div id="code-empty" class="card empty-state hidden">
+      <p>No coding questions match the current filters.</p>
+    </div>
+  </section>
+
 </main>
 
 <script src="/app.js"></script>

@@ -76,6 +76,7 @@ class Handler(BaseHTTPRequestHandler):
                 category=params.get("category", [None])[0],
                 topic=params.get("topic", [None])[0],
                 difficulty=params.get("difficulty", [None])[0],
+                question_type=params.get("type", [None])[0],
             )
             self._send_json(qs)
 
@@ -86,6 +87,17 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(q)
             else:
                 self._send_json({"error": "not found"}, 404)
+
+        elif path.startswith("/api/code/questions/"):
+            question_id = path.split("/api/code/questions/")[1]
+            q = database.get_question(question_id)
+            if not q:
+                self._send_json({"error": "not found"}, 404)
+                return
+            dataset = database.get_dataset(q.get("dataset_reference", "")) if q.get("dataset_reference") else None
+            q["dataset_schema"] = dataset["ddl"] if dataset else None
+            q["dataset_description"] = dataset["description"] if dataset else None
+            self._send_json(q)
 
         elif path == "/api/progress/stats":
             self._send_json(database.get_stats())
@@ -117,13 +129,51 @@ class Handler(BaseHTTPRequestHandler):
             )
             self._send_json({"status": "ok"}, 201)
 
+        elif path == "/api/code/execute":
+            data = self._read_body()
+            question = database.get_question(data.get("question_id", ""))
+            if not question:
+                self._send_json({"error": "question not found"}, 404)
+                return
+            dataset_name = question.get("dataset_reference")
+            if not dataset_name:
+                self._send_json({"error": "question has no dataset"}, 400)
+                return
+            result = database.execute_query(dataset_name, data.get("query", ""))
+            self._send_json(result, 200 if "error" not in result else 400)
+
+        elif path == "/api/code/submit":
+            data = self._read_body()
+            question = database.get_question(data.get("question_id", ""))
+            if not question:
+                self._send_json({"error": "question not found"}, 404)
+                return
+            dataset_name = question.get("dataset_reference")
+            if not dataset_name:
+                self._send_json({"error": "question has no dataset"}, 400)
+                return
+
+            result = database.validate_query(
+                dataset_name,
+                data.get("query", ""),
+                question["correct_answer"],
+            )
+
+            # Save progress — reuse existing function
+            database.save_progress(
+                question_id=data["question_id"],
+                correct=1 if result.get("match") else 0,
+                user_answer=data.get("query", ""),
+            )
+
+            self._send_json(result)
+
         else:
             self.send_error(404)
 
 
 def main():
     database.init_db()
-    database.seed_questions()
     server = ReusableHTTPServer(("0.0.0.0", PORT), Handler)
     print(f"Serving on http://0.0.0.0:{PORT}")
 

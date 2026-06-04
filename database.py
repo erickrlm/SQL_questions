@@ -43,11 +43,22 @@ def init_db():
             user_answer TEXT NOT NULL
         );
 
+        CREATE TABLE IF NOT EXISTS datasets (
+            name TEXT PRIMARY KEY,
+            description TEXT NOT NULL DEFAULT '',
+            ddl TEXT NOT NULL,
+            sample_data TEXT NOT NULL
+        );
+
         CREATE INDEX IF NOT EXISTS idx_progress_question ON progress(question_id);
         CREATE INDEX IF NOT EXISTS idx_progress_completed ON progress(completed_at);
     """)
     conn.commit()
-    return conn
+    conn.close()
+    seed_questions()
+    seed_datasets()
+    seed_coding_questions()
+    return get_db()
 
 
 def seed_questions():
@@ -1807,6 +1818,496 @@ def seed_questions():
     conn.commit()
     conn.close()
     print(f"Seeded {len(questions)} questions.")
+
+
+def seed_datasets():
+    """Insert reusable datasets for coding questions if none exist."""
+    conn = get_db()
+    existing = conn.execute("SELECT COUNT(*) FROM datasets").fetchone()[0]
+    if existing > 0:
+        conn.close()
+        return
+
+    datasets = [
+        {
+            "name": "employees",
+            "description": "HR department and employee data with organizational hierarchy",
+            "ddl": """
+                CREATE TABLE departments (
+                    department_id INTEGER PRIMARY KEY,
+                    department_name TEXT NOT NULL,
+                    location TEXT NOT NULL,
+                    budget REAL
+                );
+                CREATE TABLE employees (
+                    employee_id INTEGER PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    department_id INTEGER REFERENCES departments(department_id),
+                    salary REAL,
+                    hire_date TEXT,
+                    manager_id INTEGER REFERENCES employees(employee_id)
+                );
+            """,
+            "sample_data": """
+                INSERT INTO departments VALUES
+                (1, 'Engineering', 'Building A', 500000),
+                (2, 'Marketing', 'Building B', 200000),
+                (3, 'Sales', 'Building B', 300000),
+                (4, 'HR', 'Building A', 100000),
+                (5, 'Finance', 'Building C', 250000);
+                INSERT INTO employees VALUES
+                (1, 'Alice Johnson', 1, 95000, '2020-01-15', NULL),
+                (2, 'Bob Smith', 1, 85000, '2020-03-01', 1),
+                (3, 'Charlie Brown', 2, 60000, '2021-06-01', NULL),
+                (4, 'Diana Prince', 3, 70000, '2019-11-15', NULL),
+                (5, 'Eve Wilson', 1, 92000, '2018-04-20', 1),
+                (6, 'Frank Miller', 4, 55000, '2022-01-10', NULL),
+                (7, 'Grace Lee', 5, 78000, '2020-07-22', NULL),
+                (8, 'Henry Davis', 3, 72000, '2021-03-05', 4),
+                (9, 'Ivy Chen', 2, 58000, '2022-09-12', NULL),
+                (10, 'Jack Taylor', 4, 52000, '2023-02-28', NULL),
+                (11, 'Kate Adams', 1, 105000, '2019-06-01', 1),
+                (12, 'Leo Martinez', 5, 81000, '2020-11-01', NULL);
+            """,
+        },
+        {
+            "name": "sales",
+            "description": "E-commerce customer orders and products",
+            "ddl": """
+                CREATE TABLE customers (
+                    customer_id INTEGER PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    city TEXT,
+                    signup_date TEXT
+                );
+                CREATE TABLE products (
+                    product_id INTEGER PRIMARY KEY,
+                    product_name TEXT NOT NULL,
+                    category TEXT,
+                    price REAL
+                );
+                CREATE TABLE orders (
+                    order_id INTEGER PRIMARY KEY,
+                    customer_id INTEGER REFERENCES customers(customer_id),
+                    order_date TEXT NOT NULL,
+                    total REAL,
+                    status TEXT
+                );
+            """,
+            "sample_data": """
+                INSERT INTO customers VALUES
+                (1, 'Acme Corp', 'New York', '2023-01-15'),
+                (2, 'Globex Inc', 'San Francisco', '2023-03-20'),
+                (3, 'Initech', 'Austin', '2023-06-10'),
+                (4, 'Hooli', 'San Francisco', '2023-08-05'),
+                (5, 'Stark Industries', 'New York', '2023-09-01'),
+                (6, 'Wayne Enterprises', 'New York', '2024-01-15'),
+                (7, 'Cyberdyne Systems', 'Los Angeles', '2024-02-20');
+                INSERT INTO products VALUES
+                (1, 'Widget Pro', 'Electronics', 29.99),
+                (2, 'Gadget X', 'Electronics', 49.99),
+                (3, 'Super Tool', 'Hardware', 19.99),
+                (4, 'Data Cable', 'Accessories', 9.99),
+                (5, 'Power Bank', 'Electronics', 39.99),
+                (6, 'Mouse Pad', 'Accessories', 4.99),
+                (7, 'Desk Lamp', 'Furniture', 34.99),
+                (8, 'USB Hub', 'Electronics', 24.99);
+                INSERT INTO orders VALUES
+                (1, 1, '2024-01-10', 149.95, 'shipped'),
+                (2, 2, '2024-01-12', 59.98, 'delivered'),
+                (3, 1, '2024-02-05', 89.97, 'delivered'),
+                (4, 3, '2024-02-10', 24.99, 'cancelled'),
+                (5, 4, '2024-02-15', 199.95, 'shipped'),
+                (6, 5, '2024-03-01', 49.99, 'delivered'),
+                (7, 1, '2024-03-20', 74.98, 'processing'),
+                (8, 6, '2024-04-01', 34.99, 'shipped'),
+                (9, 4, '2024-04-15', 59.98, 'delivered'),
+                (10, 7, '2024-05-01', 39.99, 'pending');
+            """,
+        },
+        {
+            "name": "university",
+            "description": "Student enrollment and course management",
+            "ddl": """
+                CREATE TABLE students (
+                    student_id INTEGER PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    major TEXT,
+                    enrollment_year INTEGER
+                );
+                CREATE TABLE courses (
+                    course_id INTEGER PRIMARY KEY,
+                    course_name TEXT NOT NULL,
+                    credits INTEGER,
+                    department TEXT
+                );
+                CREATE TABLE enrollments (
+                    enrollment_id INTEGER PRIMARY KEY,
+                    student_id INTEGER REFERENCES students(student_id),
+                    course_id INTEGER REFERENCES courses(course_id),
+                    grade TEXT,
+                    semester TEXT
+                );
+            """,
+            "sample_data": """
+                INSERT INTO students VALUES
+                (1, 'Peter Parker', 'Computer Science', 2020),
+                (2, 'Mary Jane', 'Mathematics', 2021),
+                (3, 'Harry Osborn', 'Business', 2020),
+                (4, 'Gwen Stacy', 'Biology', 2022),
+                (5, 'Miles Morales', 'Computer Science', 2023),
+                (6, 'Cindy Moon', 'Computer Science', 2022);
+                INSERT INTO courses VALUES
+                (1, 'Intro to CS', 3, 'CS'),
+                (2, 'Data Structures', 4, 'CS'),
+                (3, 'Calculus II', 4, 'Math'),
+                (4, 'Linear Algebra', 3, 'Math'),
+                (5, 'Organic Chemistry', 4, 'Chemistry'),
+                (6, 'Microeconomics', 3, 'Business'),
+                (7, 'Machine Learning', 4, 'CS'),
+                (8, 'Statistics', 3, 'Math');
+                INSERT INTO enrollments VALUES
+                (1, 1, 1, 'A', '2020-Fall'),
+                (2, 1, 2, 'A-', '2021-Spring'),
+                (3, 1, 7, 'B+', '2022-Fall'),
+                (4, 2, 3, 'B', '2021-Fall'),
+                (5, 2, 4, 'A', '2022-Spring'),
+                (6, 2, 8, 'A-', '2022-Fall'),
+                (7, 3, 6, 'C+', '2020-Fall'),
+                (8, 4, 5, 'B-', '2022-Fall'),
+                (9, 5, 1, 'B+', '2023-Fall'),
+                (10, 6, 1, 'A', '2022-Fall'),
+                (11, 6, 2, 'A', '2023-Spring'),
+                (12, 6, 7, 'A-', '2023-Fall');
+            """,
+        },
+    ]
+
+    conn.executemany(
+        "INSERT OR IGNORE INTO datasets (name, description, ddl, sample_data) VALUES (?, ?, ?, ?)",
+        [(d["name"], d["description"], d["ddl"], d["sample_data"]) for d in datasets],
+    )
+    conn.commit()
+    conn.close()
+    print(f"Seeded {len(datasets)} datasets.")
+
+
+def seed_coding_questions():
+    """Insert coding questions if none exist. Uses IDs c001-c015."""
+    conn = get_db()
+    existing = conn.execute("SELECT COUNT(*) FROM questions WHERE type = 'coding'").fetchone()[0]
+    if existing > 0:
+        conn.close()
+        return
+
+    coding_questions = [
+        # === EASY (5) ===
+        {
+            "id": "c001",
+            "category": "SQL Basics",
+            "topic": "joins",
+            "difficulty": "easy",
+            "dataset_reference": "employees",
+            "prompt": "Write a query to list all employees with their department names. Show employee name and department name. Order by employee_id.",
+            "correct_answer": "SELECT e.name, d.department_name FROM employees e JOIN departments d ON e.department_id = d.department_id ORDER BY e.employee_id",
+            "explanation": "This is a basic INNER JOIN. The ON clause matches the department_id foreign key in employees to the primary key in departments. ORDER BY employee_id keeps the output deterministic. Aliases (e and d) make the query more readable.",
+        },
+        {
+            "id": "c002",
+            "category": "SQL Basics",
+            "topic": "filtering",
+            "difficulty": "easy",
+            "dataset_reference": "sales",
+            "prompt": "Write a query to find all orders with a total greater than $100. Show order_id, customer_id, total, and order_date. Sort by total descending.",
+            "correct_answer": "SELECT order_id, customer_id, total, order_date FROM orders WHERE total > 100 ORDER BY total DESC",
+            "explanation": "WHERE filters rows before SELECT. ORDER BY with DESC sorts from highest to lowest. You could also use >= or a subquery — any query producing the same result set is correct as long as the output matches.",
+        },
+        {
+            "id": "c003",
+            "category": "SQL Basics",
+            "topic": "aggregation",
+            "difficulty": "easy",
+            "dataset_reference": "employees",
+            "prompt": "Write a query to count the number of employees in each department. Show department_name and employee_count. Include departments with zero employees. Sort by employee_count descending.",
+            "correct_answer": "SELECT d.department_name, COUNT(e.employee_id) AS employee_count FROM departments d LEFT JOIN employees e ON d.department_id = e.department_id GROUP BY d.department_name ORDER BY employee_count DESC",
+            "explanation": "GROUP BY creates one row per department. COUNT counts employees in each group. LEFT JOIN ensures departments with no employees appear with count 0. INNER JOIN would exclude departments without employees.",
+        },
+        {
+            "id": "c004",
+            "category": "SQL Basics",
+            "topic": "sorting",
+            "difficulty": "easy",
+            "dataset_reference": "university",
+            "prompt": "Write a query to list all students who enrolled in 2020 or later. Show name, major, and enrollment_year. Sort by name alphabetically.",
+            "correct_answer": "SELECT name, major, enrollment_year FROM students WHERE enrollment_year >= 2020 ORDER BY name",
+            "explanation": "Simple filtering with >= on a numeric column. ORDER BY name defaults to ascending alphabetical order. The WHERE clause is evaluated before SELECT in logical query processing.",
+        },
+        {
+            "id": "c005",
+            "category": "SQL Basics",
+            "topic": "distinct",
+            "difficulty": "easy",
+            "dataset_reference": "sales",
+            "prompt": "Write a query to find all unique product categories from the products table. Sort alphabetically.",
+            "correct_answer": "SELECT DISTINCT category FROM products ORDER BY category",
+            "explanation": "DISTINCT eliminates duplicate rows. ORDER BY sorts the result. An alternative is GROUP BY category which also deduplicates and produces the same output.",
+        },
+        # === MEDIUM (5) ===
+        {
+            "id": "c006",
+            "category": "SQL Basics",
+            "topic": "aggregation",
+            "difficulty": "medium",
+            "dataset_reference": "sales",
+            "prompt": "Write a query to find customers who have placed more than 2 orders. Show customer name and order count. Sort by order count descending.",
+            "correct_answer": "SELECT c.name, COUNT(o.order_id) AS order_count FROM customers c JOIN orders o ON c.customer_id = o.customer_id GROUP BY c.name HAVING COUNT(o.order_id) > 2 ORDER BY order_count DESC",
+            "explanation": "HAVING filters groups after aggregation, unlike WHERE which filters individual rows. The JOIN connects customers to their orders. INNER JOIN is correct here because we only want customers who actually have orders.",
+        },
+        {
+            "id": "c007",
+            "category": "Window Functions",
+            "topic": "ranking",
+            "difficulty": "medium",
+            "dataset_reference": "employees",
+            "prompt": "Write a query to rank employees by salary within each department. Show employee name, department name, salary, and rank (highest salary = 1). Sort by department name, then rank.",
+            "correct_answer": "SELECT e.name, d.department_name, e.salary, ROW_NUMBER() OVER (PARTITION BY e.department_id ORDER BY e.salary DESC) AS salary_rank FROM employees e JOIN departments d ON e.department_id = d.department_id ORDER BY d.department_name, salary_rank",
+            "explanation": "ROW_NUMBER() assigns unique sequential numbers within each department partition. PARTITION BY divides rows into groups, ORDER BY within the window determines numbering. RANK() would give ties the same rank with gaps — ROW_NUMBER always assigns unique numbers.",
+        },
+        {
+            "id": "c008",
+            "category": "SQL Basics",
+            "topic": "joins",
+            "difficulty": "medium",
+            "dataset_reference": "sales",
+            "prompt": "Write a query to find customers who have never placed an order. Show customer_id and name.",
+            "correct_answer": "SELECT c.customer_id, c.name FROM customers c LEFT JOIN orders o ON c.customer_id = o.customer_id WHERE o.order_id IS NULL",
+            "explanation": "This is an anti-join pattern. LEFT JOIN keeps all customers, and WHERE o.order_id IS NULL filters to only those with no matching order. NOT EXISTS (SELECT 1 FROM orders WHERE customer_id = c.customer_id) is an equivalent alternative.",
+        },
+        {
+            "id": "c009",
+            "category": "Query Design",
+            "topic": "self-join",
+            "difficulty": "medium",
+            "dataset_reference": "employees",
+            "prompt": "Write a query to show each employee alongside their manager's name. Display 'employee' and 'manager' columns. Include employees without a manager (show NULL). Order by employee_id.",
+            "correct_answer": "SELECT e.name AS employee, m.name AS manager FROM employees e LEFT JOIN employees m ON e.manager_id = m.employee_id ORDER BY e.employee_id",
+            "explanation": "A self-join joins a table to itself using different aliases. LEFT JOIN is essential because some employees (like Alice, who has manager_id = NULL) would be excluded by INNER JOIN. The alias 'm' references the manager side of the join.",
+        },
+        {
+            "id": "c010",
+            "category": "Query Design",
+            "topic": "subqueries",
+            "difficulty": "medium",
+            "dataset_reference": "employees",
+            "prompt": "Write a query to find the highest paid employee(s) in each department. Show department_name, employee name, and salary. Order by department_name.",
+            "correct_answer": "SELECT d.department_name, e.name, e.salary FROM employees e JOIN departments d ON e.department_id = d.department_id WHERE e.salary = (SELECT MAX(e2.salary) FROM employees e2 WHERE e2.department_id = e.department_id) ORDER BY d.department_name",
+            "explanation": "A correlated subquery finds each department's max salary. For every employee row, the subquery runs to get that department's maximum. This returns all employees tied for the highest salary in their department. Alternatively, a CTE with RANK() could produce the same result.",
+        },
+        # === HARD (5) ===
+        {
+            "id": "c011",
+            "category": "Query Design",
+            "topic": "correlated-subqueries",
+            "difficulty": "hard",
+            "dataset_reference": "employees",
+            "prompt": "Write a query to find employees who earn more than their department's average salary. Show employee name, salary, department name, and the department's average salary (as dept_avg, rounded to 2 decimals). Order by employee_id.",
+            "correct_answer": "SELECT e.name, e.salary, d.department_name, ROUND((SELECT AVG(e2.salary) FROM employees e2 WHERE e2.department_id = e.department_id), 2) AS dept_avg FROM employees e JOIN departments d ON e.department_id = d.department_id WHERE e.salary > (SELECT AVG(e2.salary) FROM employees e2 WHERE e2.department_id = e.department_id) ORDER BY e.employee_id",
+            "explanation": "Correlated scalar subqueries are used both in SELECT (to show the department average) and in WHERE (to filter). The subquery references the outer employee's department_id and must be re-evaluated per row. A CTE pre-computing averages would produce the same result set and is an equally valid approach.",
+        },
+        {
+            "id": "c012",
+            "category": "Window Functions",
+            "topic": "ranking",
+            "difficulty": "hard",
+            "dataset_reference": "sales",
+            "prompt": "Write a query using a CTE to find the top 2 most expensive products in each category. Show category, product_name, and price. Order by category alphabetically, then price descending.",
+            "correct_answer": "WITH ranked AS (SELECT category, product_name, price, ROW_NUMBER() OVER (PARTITION BY category ORDER BY price DESC) AS rn FROM products) SELECT category, product_name, price FROM ranked WHERE rn <= 2 ORDER BY category, price DESC",
+            "explanation": "A CTE separates the window function calculation from the filter. ROW_NUMBER() generates sequential ranks per category partition. The outer query filters rn <= 2 for top-2 per group. This is the canonical top-N-per-group pattern.",
+        },
+        {
+            "id": "c013",
+            "category": "Window Functions",
+            "topic": "frames",
+            "difficulty": "hard",
+            "dataset_reference": "sales",
+            "prompt": "Write a query to calculate a running total of order amounts for each customer over time. Show customer name, order date, total, and a 'running_total' column. Order by customer name, then order date.",
+            "correct_answer": "SELECT c.name, o.order_date, o.total, SUM(o.total) OVER (PARTITION BY o.customer_id ORDER BY o.order_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS running_total FROM customers c JOIN orders o ON c.customer_id = o.customer_id ORDER BY c.name, o.order_date",
+            "explanation": "The window frame ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW creates a cumulative sum from the first order to the current row within each customer partition. This is the default frame behavior when ORDER BY is specified in OVER.",
+        },
+        {
+            "id": "c014",
+            "category": "Query Design",
+            "topic": "recursive-ctes",
+            "difficulty": "hard",
+            "dataset_reference": "employees",
+            "prompt": "Write a recursive query to show the full reporting hierarchy starting from Alice Johnson (employee_id = 1). Show employee_id, name, and a 'level' column (Alice = 1, her direct reports = 2, etc.). Include Alice herself.",
+            "correct_answer": "WITH RECURSIVE org AS (SELECT employee_id, name, 1 AS level FROM employees WHERE employee_id = 1 UNION ALL SELECT e.employee_id, e.name, org.level + 1 FROM employees e JOIN org ON e.manager_id = org.employee_id) SELECT employee_id, name, level FROM org ORDER BY level, name",
+            "explanation": "A recursive CTE has an anchor (the starting node, Alice) and a recursive member that finds direct reports by joining back to the CTE. Each iteration adds one more level. The recursion stops when no more reports are found. UNION ALL combines all levels. Sort by level then name for a clean hierarchy view.",
+        },
+        {
+            "id": "c015",
+            "category": "Window Functions",
+            "topic": "lag-lead",
+            "difficulty": "hard",
+            "dataset_reference": "sales",
+            "prompt": "Write a query to show month-over-month sales growth. Show month (YYYY-MM format), total_sales, previous_month_sales, and growth_pct (percentage growth rounded to 1 decimal). Order by month.",
+            "correct_answer": "WITH monthly AS (SELECT strftime('%Y-%m', order_date) AS month, SUM(total) AS total_sales FROM orders GROUP BY month) SELECT month, total_sales, LAG(total_sales) OVER (ORDER BY month) AS previous_month_sales, ROUND((total_sales - LAG(total_sales) OVER (ORDER BY month)) * 100.0 / LAG(total_sales) OVER (ORDER BY month), 1) AS growth_pct FROM monthly ORDER BY month",
+            "explanation": "A CTE pre-computes monthly totals. LAG() accesses the previous row's value based on month order. Growth is (current - previous) / previous * 100. The first month's LAG returns NULL, so its growth_pct is also NULL — that's expected since there's no prior month to compare against.",
+        },
+    ]
+
+    conn.executemany(
+        """
+        INSERT OR IGNORE INTO questions
+            (id, category, topic, difficulty, type, prompt, choices, correct_answer, explanation, hints, tags, dataset_reference)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            (
+                q["id"], q["category"], q["topic"], q["difficulty"], "coding",
+                q["prompt"], "[]", q["correct_answer"], q["explanation"],
+                "[]", json.dumps(["sql", q["topic"]]), q["dataset_reference"],
+            )
+            for q in coding_questions
+        ],
+    )
+
+    conn.commit()
+    conn.close()
+    print(f"Seeded {len(coding_questions)} coding questions.")
+
+
+def get_dataset(name):
+    """Fetch a dataset by name."""
+    conn = get_db()
+    row = conn.execute("SELECT * FROM datasets WHERE name = ?", (name,)).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+MAX_RESULT_ROWS = 200
+
+
+def _create_sandbox(dataset_name):
+    """Create an in-memory SQLite DB, load the dataset DDL and sample data."""
+    dataset = get_dataset(dataset_name)
+    if not dataset:
+        raise ValueError(f"Dataset '{dataset_name}' not found")
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.executescript(dataset["ddl"])
+    conn.executescript(dataset["sample_data"])
+    return conn
+
+
+def execute_query(dataset_name, sql):
+    """Execute a user's SQL query against a dataset sandbox.
+
+    Returns a dict with columns/rows on success, or an error dict.
+    Only SELECT queries are allowed.
+    """
+    # Basic safety: reject non-SELECT statements
+    stripped = sql.strip().upper()
+    if not stripped.startswith("SELECT"):
+        return {"error": "Only SELECT queries are supported."}
+
+    try:
+        conn = _create_sandbox(dataset_name)
+    except ValueError as e:
+        return {"error": str(e)}
+
+    try:
+        cursor = conn.execute(sql)
+        if cursor.description is None:
+            return {"error": "Only SELECT queries are supported."}
+        columns = [desc[0] for desc in cursor.description]
+        rows = cursor.fetchmany(MAX_RESULT_ROWS + 1)
+        truncated = len(rows) > MAX_RESULT_ROWS
+        rows = [[cell for cell in r] for r in rows[:MAX_RESULT_ROWS]]
+        return {
+            "columns": columns,
+            "rows": rows,
+            "row_count": len(rows),
+            "truncated": truncated,
+        }
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        conn.close()
+
+
+def validate_query(dataset_name, user_sql, expected_sql):
+    """Run user and expected queries in a sandbox and compare result sets.
+
+    Comparison is done on sorted result sets — column count, row count,
+    then sorted row-by-row. Column names are not compared to avoid
+    false failures from alias differences.
+    """
+    try:
+        conn = _create_sandbox(dataset_name)
+    except ValueError as e:
+        return {"match": False, "error": str(e)}
+
+    try:
+        user_cursor = conn.execute(user_sql)
+        if user_cursor.description is None:
+            return {"match": False, "error": "User query must be a SELECT."}
+        user_columns = [desc[0] for desc in user_cursor.description]
+        user_rows = [tuple(r) for r in user_cursor.fetchall()]
+    except Exception as e:
+        conn.close()
+        return {"match": False, "error": f"Query error: {e}"}
+
+    try:
+        exp_cursor = conn.execute(expected_sql)
+        exp_columns = [desc[0] for desc in exp_cursor.description]
+        exp_rows = [tuple(r) for r in exp_cursor.fetchall()]
+    except Exception as e:
+        conn.close()
+        return {"match": False, "error": f"Validation error: {e}"}
+
+    conn.close()
+
+    # 1. Column count
+    if len(user_columns) != len(exp_columns):
+        return {
+            "match": False,
+            "details": f"Column count mismatch. Got {len(user_columns)}, expected {len(exp_columns)}.",
+            "user_columns": user_columns,
+            "expected_columns": exp_columns,
+            "user_row_count": len(user_rows),
+            "expected_row_count": len(exp_rows),
+        }
+
+    # 2. Row count
+    if len(user_rows) != len(exp_rows):
+        return {
+            "match": False,
+            "details": f"Row count mismatch. Got {len(user_rows)}, expected {len(exp_rows)}.",
+            "user_columns": user_columns,
+            "expected_columns": exp_columns,
+            "user_row_count": len(user_rows),
+            "expected_row_count": len(exp_rows),
+        }
+
+    # 3. Sorted row-by-row comparison
+    if sorted(user_rows) != sorted(exp_rows):
+        return {
+            "match": False,
+            "details": "Row values do not match the expected output.",
+            "user_columns": user_columns,
+            "expected_columns": exp_columns,
+            "user_row_count": len(user_rows),
+            "expected_row_count": len(exp_rows),
+        }
+
+    return {
+        "match": True,
+        "details": "",
+        "user_columns": user_columns,
+        "user_row_count": len(user_rows),
+        "expected_row_count": len(exp_rows),
+    }
 
 
 def get_questions(category=None, topic=None, difficulty=None, question_type=None):
