@@ -13,18 +13,21 @@ Requires Python 3. No install step, no virtual environment needed — uses only 
 
 ## Features
 
-- **35 multiple-choice questions** across 7 categories and 35 topics, covering SQL basics, window functions, query design, data modeling, query optimization, data warehousing, and ETL concepts
+- **117 questions** (102 multiple choice + 15 coding) across 7 categories and 40+ topics, covering SQL basics, window functions, query design, data modeling, query optimization, data warehousing, and ETL concepts
+- **Two question types** — Multiple choice (pick the correct answer) and Query (write a SQL query against a real dataset)
+- **SQL coding sandbox** (Phase 2) — write and execute SQL queries in-browser with result-set validation, schema inspection, and instant feedback — like Leetcode for SQL
 - **3 difficulty levels** — easy, medium, hard
-- **Keyboard-driven** — answer with A/B/C/D keys, switch views with 1/2/3, advance with Enter
-- **Progress tracking** — accuracy by topic and difficulty, response time, confidence self-assessment, weak topic detection
+- **4 views** — Practice (multiple choice), Code (SQL sandbox), Stats (progress tracking), and Questions (browse all)
+- **Keyboard-driven** — answer with A/B/C/D keys, switch views with 1/2/3/4, advance with Enter, run queries with Ctrl+Enter
+- **Progress tracking** — accuracy by topic and difficulty, response time, confidence self-assessment, weak topic detection — shared across both Practice and Code modes
 - **Dark/light theme** with system-persisted preference
-- **Filterable question browser** by difficulty, topic, and category
+- **Filterable question browser** by difficulty, topic, category, and type
 
 ## Architecture
 
 ```
 server.py        # HTTP server + JSON API (stdlib http.server)
-database.py      # SQLite CRUD, stats, seeding
+database.py      # SQLite CRUD, stats, datasets, seeding
 frontend/
   index.html     # SPA shell
   app.js         # Client-side logic (vanilla JS)
@@ -40,28 +43,65 @@ data/
 
 ## API
 
+### Questions
+
 | Method | Route | Description |
 |--------|-------|-------------|
-| GET | `/api/questions` | List questions (filter by `?difficulty=&topic=&category=`) |
+| GET | `/api/questions` | List questions (filter by `?difficulty=&topic=&category=&type=`) |
 | GET | `/api/questions/:id` | Single question by ID |
 | GET | `/api/topics` | All topics and categories |
+
+### Code sandbox
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET | `/api/code/questions/:id` | Coding question with dataset schema (DDL) |
+| POST | `/api/code/execute` | Run a user's SQL query against the question's dataset (body: `{question_id, query}`) |
+| POST | `/api/code/submit` | Validate a query answer against expected output and save progress (body: `{question_id, query}`) |
+
+### Progress
+
+| Method | Route | Description |
+|--------|-------|-------------|
 | GET | `/api/progress/stats` | Accuracy, totals, by-topic, by-difficulty breakdowns |
 | GET | `/api/progress/weak-topics?threshold=60` | Topics below accuracy threshold |
 | POST | `/api/progress` | Record an answer or confidence rating |
 
+### Data validation
+
+The query sandbox validates by **comparing result sets**, not SQL text. Your query is correct if it produces the same output as the expected solution — column count, row count, and sorted row values all match. Equivalent queries (CTE vs subquery, JOIN vs EXISTS) are accepted as long as the output matches.
+
+Each query execution runs in a fresh **in-memory SQLite database** — destructive queries can't affect anything. Results are capped at 200 rows.
+
+## Datasets
+
+Three reusable datasets power the coding questions:
+
+| Dataset | Tables | Rows | Topics |
+|---------|--------|------|--------|
+| `employees` | departments, employees | 17 | JOINs, aggregation, self-joins, correlated subqueries, recursive CTEs |
+| `sales` | customers, products, orders | 25 | Filtering, aggregation, window functions, running totals, MoM growth |
+| `university` | students, courses, enrollments | 26 | Sorting, subqueries, grouping, window functions |
+
 ## Adding questions
 
-Questions are seeded from the `questions` list in `database.py:seed_questions()`. To add more:
+Questions are seeded from three functions in `database.py`:
 
-1. Add entries to the `questions` list in `database.py`
+- `seed_questions()` — multiple choice questions
+- `seed_coding_questions()` — SQL coding questions
+- `seed_datasets()` — dataset schemas and sample data for coding questions
+
+To add more:
+
+1. Add entries to the appropriate list in `database.py`
 2. Delete `data/studytool.db` to trigger re-seed
 3. Restart the server
 
-Each question follows this schema:
+### Multiple choice question schema
 
 ```python
 {
-    "id": "q036",
+    "id": "q042",
     "category": "SQL Basics",
     "topic": "joins",
     "difficulty": "medium",        # easy | medium | hard
@@ -74,17 +114,34 @@ Each question follows this schema:
 }
 ```
 
+### Coding question schema
+
+```python
+{
+    "id": "c016",
+    "category": "Query Design",
+    "topic": "ctes",
+    "difficulty": "hard",
+    "dataset_reference": "employees",     # references a dataset in seed_datasets()
+    "prompt": "Write a query to find ...",
+    "correct_answer": "SELECT ...",       # the expected query (for result-set validation)
+    "explanation": "Explanation of the solution approach.",
+}
+```
+
 ## Keyboard shortcuts
 
 | Key | Action |
 |-----|--------|
-| A–D | Select answer choice |
+| A–D | Select answer choice (Practice view) |
 | Enter | Next question (after answering) |
+| Ctrl+Enter | Run SQL query (Code view) |
 | 1 | Practice view |
 | 2 | Stats view |
-| 3 | Question list |
+| 3 | Questions list |
+| 4 | Code view |
 | Ctrl+R | Random question |
 
 ## Roadmap
 
-Phase 2 (planned): SQL coding sandbox with query execution and result-set validation. Phase 3: spaced repetition and adaptive practice.
+Phase 3 (planned): spaced repetition and adaptive practice.
