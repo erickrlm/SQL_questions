@@ -72,7 +72,7 @@ async function loadRandomQuestion() {
   const topic = document.getElementById("filter-topic").value;
 
   const params = new URLSearchParams();
-  params.set("type", "multiple_choice");
+  params.set("type", "Multiple choice");
   if (difficulty) params.set("difficulty", difficulty);
   if (topic) params.set("topic", topic);
 
@@ -274,15 +274,18 @@ function renderRecent(items) {
 document.getElementById("qlist-difficulty").addEventListener("change", loadQuestionList);
 document.getElementById("qlist-topic").addEventListener("change", loadQuestionList);
 document.getElementById("qlist-category").addEventListener("change", loadQuestionList);
+document.getElementById("qlist-type").addEventListener("change", loadQuestionList);
 
 async function loadQuestionList() {
   const params = new URLSearchParams();
   const difficulty = document.getElementById("qlist-difficulty").value;
   const topic = document.getElementById("qlist-topic").value;
   const category = document.getElementById("qlist-category").value;
+  const type = document.getElementById("qlist-type").value;
   if (difficulty) params.set("difficulty", difficulty);
   if (topic) params.set("topic", topic);
   if (category) params.set("category", category);
+  if (type) params.set("type", type);
 
   const qs = await api(`/api/questions?${params}`);
   const container = document.getElementById("questions-list");
@@ -293,9 +296,10 @@ async function loadQuestionList() {
   }
 
   container.innerHTML = qs.map(q => `
-    <div class="question-row" data-id="${q.id}">
+    <div class="question-row" data-id="${q.id}" data-type="${q.type}">
       <span class="q-prompt">${q.prompt}</span>
       <span class="q-meta">
+        <span class="badge">${q.type}</span>
         <span class="badge">${q.difficulty}</span>
         <span class="badge">${q.topic}</span>
       </span>
@@ -305,10 +309,18 @@ async function loadQuestionList() {
   container.querySelectorAll(".question-row").forEach(row => {
     row.addEventListener("click", async () => {
       const q = await api(`/api/questions/${row.dataset.id}`);
-      currentQuestions = [q];
-      currentIndex = 0;
-      switchView("practice");
-      renderQuestion(q);
+      const isCoding = q.type === "Query" || q.type === "coding";
+      if (isCoding) {
+        const fullQ = await api(`/api/code/questions/${q.id}`);
+        currentCodeQuestion = fullQ;
+        switchView("code");
+        renderCodeQuestion(fullQ);
+      } else {
+        currentQuestions = [q];
+        currentIndex = 0;
+        switchView("practice");
+        renderQuestion(q);
+      }
     });
   });
 }
@@ -352,7 +364,7 @@ async function loadRandomCodeQuestion() {
   const topic = document.getElementById("code-filter-topic").value;
 
   const params = new URLSearchParams();
-  params.set("type", "coding");
+  params.set("type", "Query");
   if (difficulty) params.set("difficulty", difficulty);
   if (topic) params.set("topic", topic);
 

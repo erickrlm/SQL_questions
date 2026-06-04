@@ -23,7 +23,7 @@ def init_db():
             category TEXT NOT NULL,
             topic TEXT NOT NULL,
             difficulty TEXT NOT NULL CHECK(difficulty IN ('easy','medium','hard')),
-            type TEXT NOT NULL DEFAULT 'multiple_choice',
+            type TEXT NOT NULL DEFAULT 'Multiple choice',
             prompt TEXT NOT NULL,
             choices TEXT NOT NULL,
             correct_answer TEXT NOT NULL,
@@ -1809,7 +1809,7 @@ def seed_questions():
             (id, category, topic, difficulty, type, prompt, choices, correct_answer, explanation, hints, tags)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, [
-        (q["id"], q["category"], q["topic"], q["difficulty"], "multiple_choice",
+        (q["id"], q["category"], q["topic"], q["difficulty"], "Multiple choice",
          q["prompt"], q["choices"], q["correct_answer"], q["explanation"],
          q.get("hints", "[]"), q.get("tags", "[]"))
         for q in questions
@@ -1995,7 +1995,7 @@ def seed_datasets():
 def seed_coding_questions():
     """Insert coding questions if none exist. Uses IDs c001-c015."""
     conn = get_db()
-    existing = conn.execute("SELECT COUNT(*) FROM questions WHERE type = 'coding'").fetchone()[0]
+    existing = conn.execute("SELECT COUNT(*) FROM questions WHERE type = 'Query'").fetchone()[0]
     if existing > 0:
         conn.close()
         return
@@ -2164,7 +2164,7 @@ def seed_coding_questions():
         """,
         [
             (
-                q["id"], q["category"], q["topic"], q["difficulty"], "coding",
+                q["id"], q["category"], q["topic"], q["difficulty"], "Query",
                 q["prompt"], "[]", q["correct_answer"], q["explanation"],
                 "[]", json.dumps(["sql", q["topic"]]), q["dataset_reference"],
             )
