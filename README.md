@@ -27,7 +27,8 @@ Requires Python 3. No install step, no virtual environment needed — uses only 
 
 ```
 server.py        # HTTP server + JSON API (stdlib http.server)
-database.py      # SQLite CRUD, stats, datasets, seeding
+database.py      # Schema, CRUD, stats, SQL sandbox execution
+seed_data.py     # All 147 questions and 4 datasets (pure data)
 frontend/
   index.html     # SPA shell
   app.js         # Client-side logic (vanilla JS)
@@ -40,6 +41,7 @@ data/
 - **Database:** SQLite via `sqlite3` stdlib module
 - **Frontend:** Plain HTML/CSS/JS — no framework, no build step, no npm
 - **Total dependencies:** 0
+- **Code/data separation:** `database.py` (~290 lines) handles logic; `seed_data.py` (~2,500 lines) holds all question and dataset definitions
 
 ## API
 
@@ -85,15 +87,15 @@ Three reusable datasets power the coding questions:
 
 ## Adding questions
 
-Questions are seeded from three functions in `database.py`:
+Questions are seeded from three functions in `seed_data.py`:
 
-- `seed_questions()` — multiple choice questions
-- `seed_coding_questions()` — SQL coding questions
-- `seed_datasets()` — dataset schemas and sample data for coding questions
+- `seed_questions(get_db)` — multiple choice questions
+- `seed_coding_questions(get_db)` — SQL coding questions
+- `seed_datasets(get_db)` — dataset schemas and sample data for coding questions
 
 To add more:
 
-1. Add entries to the appropriate list in `database.py`
+1. Add entries to the appropriate list in `seed_data.py`
 2. Delete `data/studytool.db` to trigger re-seed
 3. Restart the server
 
