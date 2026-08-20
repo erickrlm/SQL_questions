@@ -92,9 +92,9 @@ def execute_query(dataset_name, sql):
     Returns a dict with columns/rows on success, or an error dict.
     Only SELECT queries are allowed.
     """
-    # Basic safety: reject non-SELECT statements
+    # Basic safety: reject non-SELECT statements (WITH covers CTEs, including recursive ones)
     stripped = sql.strip().upper()
-    if not stripped.startswith("SELECT"):
+    if not (stripped.startswith("SELECT") or stripped.startswith("WITH")):
         return {"error": "Only SELECT queries are supported."}
 
     try:

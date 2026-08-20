@@ -12,11 +12,9 @@ import json
 
 
 def seed_questions(get_db):
+    """Insert multiple-choice questions. Uses INSERT OR IGNORE so existing
+    IDs are left untouched and new ones added — safe to run on every startup."""
     conn = get_db()
-    existing = conn.execute("SELECT COUNT(*) FROM questions").fetchone()[0]
-    if existing > 0:
-        conn.close()
-        return
 
     questions = [
         {
@@ -1754,7 +1752,7 @@ def seed_questions(get_db):
         },
     ]
 
-    conn.executemany("""
+    cursor = conn.executemany("""
         INSERT OR IGNORE INTO questions
             (id, category, topic, difficulty, type, prompt, choices, correct_answer, explanation, hints, tags)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -1767,16 +1765,14 @@ def seed_questions(get_db):
 
     conn.commit()
     conn.close()
-    print(f"Seeded {len(questions)} questions.")
+    if cursor.rowcount > 0:
+        print(f"Seeded {cursor.rowcount} new question(s).")
 
 
 def seed_datasets(get_db):
-    """Insert reusable datasets for coding questions if none exist."""
+    """Insert reusable datasets for coding questions. Uses INSERT OR IGNORE
+    so existing datasets are left untouched and new ones added."""
     conn = get_db()
-    existing = conn.execute("SELECT COUNT(*) FROM datasets").fetchone()[0]
-    if existing > 0:
-        conn.close()
-        return
 
     datasets = [
         {
@@ -1992,22 +1988,20 @@ def seed_datasets(get_db):
         },
     ]
 
-    conn.executemany(
+    cursor = conn.executemany(
         "INSERT OR IGNORE INTO datasets (name, description, ddl, sample_data) VALUES (?, ?, ?, ?)",
         [(d["name"], d["description"], d["ddl"], d["sample_data"]) for d in datasets],
     )
     conn.commit()
     conn.close()
-    print(f"Seeded {len(datasets)} datasets.")
+    if cursor.rowcount > 0:
+        print(f"Seeded {cursor.rowcount} new dataset(s).")
 
 
 def seed_coding_questions(get_db):
-    """Insert coding questions if none exist. Uses IDs c001-c045."""
+    """Insert coding questions (IDs c001-c045). Uses INSERT OR IGNORE so
+    existing IDs are left untouched and new ones added."""
     conn = get_db()
-    existing = conn.execute("SELECT COUNT(*) FROM questions WHERE type = 'Query'").fetchone()[0]
-    if existing > 0:
-        conn.close()
-        return
 
     coding_questions = [
         # === EASY (5) ===
@@ -2468,7 +2462,7 @@ def seed_coding_questions(get_db):
         },
     ]
 
-    conn.executemany(
+    cursor = conn.executemany(
         """
         INSERT OR IGNORE INTO questions
             (id, category, topic, difficulty, type, prompt, choices, correct_answer, explanation, hints, tags, dataset_reference)
@@ -2486,6 +2480,7 @@ def seed_coding_questions(get_db):
 
     conn.commit()
     conn.close()
-    print(f"Seeded {len(coding_questions)} coding questions.")
+    if cursor.rowcount > 0:
+        print(f"Seeded {cursor.rowcount} new coding question(s).")
 
 

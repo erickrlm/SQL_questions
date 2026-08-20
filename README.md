@@ -96,8 +96,9 @@ Questions are seeded from three functions in `seed_data.py`:
 To add more:
 
 1. Add entries to the appropriate list in `seed_data.py`
-2. Delete `data/studytool.db` to trigger re-seed
-3. Restart the server
+2. Restart the server
+
+Seeding uses `INSERT OR IGNORE` keyed on `id`, so it runs on every startup: existing questions and your progress history are left untouched, and only IDs not already in the database get inserted. Deleting `data/studytool.db` is no longer needed (and would wipe your progress along with it) — only do that if you actually want a clean slate. Editing an existing question's text in `seed_data.py` won't update it in the database, since its `id` already exists; give it a new `id` instead, or delete that row manually.
 
 ### Multiple choice question schema
 

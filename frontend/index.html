@@ -9,7 +9,7 @@
 <body>
 
 <header>
-  <h1>SQL Prep</h1>
+  <h1><span class="logo-accent">SQL</span>Prep</h1>
   <nav>
     <button data-view="practice" class="active">Practice</button>
     <button data-view="stats">Stats</button>
@@ -76,6 +76,11 @@
     </div>
 
     <div class="card">
+      <h3>Weak Topics <span class="card-subtitle">(below 60% accuracy)</span></h3>
+      <div id="stats-weak-topics"></div>
+    </div>
+
+    <div class="card">
       <h3>By Topic</h3>
       <div id="stats-by-topic"></div>
     </div>
@@ -130,56 +135,73 @@
       <button id="code-btn-random">Random Question</button>
     </div>
 
-    <div id="code-question-container" class="card">
-      <div class="question-meta">
-        <span id="code-q-difficulty" class="badge"></span>
-        <span id="code-q-topic" class="badge"></span>
-        <span id="code-q-category" class="badge"></span>
-      </div>
-      <p id="code-q-prompt"></p>
-
-      <div id="code-schema-panel">
-        <div class="panel-header" id="code-schema-toggle">
-          <span>Schema</span>
-          <span class="panel-arrow">Hide</span>
+    <div id="code-question-container" class="code-split">
+      <div id="code-left-panel">
+        <div class="code-left-tabs">
+          <button class="code-tab active" data-tab="description">Description</button>
+          <button class="code-tab" data-tab="schema">Schema</button>
         </div>
-        <pre id="code-schema-content"></pre>
-      </div>
 
-      <div id="code-editor-area">
-        <textarea id="code-sql-editor" spellcheck="false"
-                  placeholder="Write your SQL query here. Press Ctrl+Enter to run."
-                  rows="8"></textarea>
-      </div>
+        <div id="code-tab-description" class="code-tab-panel active">
+          <div class="question-meta">
+            <span id="code-q-difficulty" class="badge"></span>
+            <span id="code-q-topic" class="badge"></span>
+            <span id="code-q-category" class="badge"></span>
+          </div>
+          <p id="code-q-prompt"></p>
+        </div>
 
-      <div id="code-actions">
-        <button id="code-btn-run" class="btn-primary">Run</button>
-        <button id="code-btn-submit" class="btn-success">Submit</button>
-        <button id="code-btn-clear" class="btn-secondary">Clear</button>
-      </div>
-
-      <div id="code-error" class="code-error hidden"></div>
-
-      <div id="code-results" class="hidden">
-        <h4>Query Results <span id="code-row-count"></span></h4>
-        <div id="code-results-table-wrapper">
-          <table id="code-results-table">
-            <thead id="code-results-thead"></thead>
-            <tbody id="code-results-tbody"></tbody>
-          </table>
+        <div id="code-tab-schema" class="code-tab-panel">
+          <pre id="code-schema-content"></pre>
         </div>
       </div>
 
-      <div id="code-feedback" class="hidden"></div>
+      <div id="code-right-panel">
+        <div id="code-editor-toolbar">
+          <span class="editor-lang">SQL</span>
+          <div id="code-actions">
+            <button id="code-btn-clear" class="btn-secondary">Clear</button>
+            <button id="code-btn-run" class="btn-secondary">Run</button>
+            <button id="code-btn-submit" class="btn-success">Submit</button>
+          </div>
+        </div>
 
-      <div id="code-confidence" class="hidden">
-        <span>Confidence:</span>
-        <button data-confidence="low">Low</button>
-        <button data-confidence="medium">Medium</button>
-        <button data-confidence="high">High</button>
+        <div id="code-editor-area">
+          <textarea id="code-sql-editor" spellcheck="false"
+                    placeholder="Write your SQL query here. Press Ctrl+Enter to run."></textarea>
+        </div>
+
+        <div id="code-console">
+          <div class="console-tabs">
+            <span class="console-tab">Console</span>
+          </div>
+          <div id="code-console-body">
+            <p id="code-console-empty" class="console-empty">Run your query to see results here.</p>
+            <div id="code-error" class="code-error hidden"></div>
+
+            <div id="code-results" class="hidden">
+              <h4>Query Results <span id="code-row-count"></span></h4>
+              <div id="code-results-table-wrapper">
+                <table id="code-results-table">
+                  <thead id="code-results-thead"></thead>
+                  <tbody id="code-results-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div id="code-feedback" class="hidden"></div>
+
+            <div id="code-confidence" class="hidden">
+              <span>Confidence:</span>
+              <button data-confidence="low">Low</button>
+              <button data-confidence="medium">Medium</button>
+              <button data-confidence="high">High</button>
+            </div>
+
+            <button id="code-btn-next" class="hidden">Next Question</button>
+          </div>
+        </div>
       </div>
-
-      <button id="code-btn-next" class="hidden">Next Question</button>
     </div>
 
     <div id="code-empty" class="card empty-state hidden">

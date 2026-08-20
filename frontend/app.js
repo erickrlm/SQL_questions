@@ -26,9 +26,15 @@ function switchView(name) {
   document.querySelector(`nav button[data-view="${name}"]`).classList.add("active");
   document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
   document.getElementById(`view-${name}`).classList.add("active");
+  document.querySelector("main").classList.toggle("wide", name === "code");
   if (name === "stats") loadStats();
   if (name === "questions") loadQuestionList();
   if (name === "code") loadRandomCodeQuestion();
+}
+
+function setDifficultyBadge(el, difficulty) {
+  el.textContent = difficulty;
+  el.className = `badge difficulty-badge ${difficulty}`;
 }
 
 // ── Theme ─────────────────────────────────────────────
@@ -96,7 +102,7 @@ function renderQuestion(q) {
   selectedConfidence = null;
   questionStartTime = Date.now();
 
-  document.getElementById("q-difficulty").textContent = q.difficulty;
+  setDifficultyBadge(document.getElementById("q-difficulty"), q.difficulty);
   document.getElementById("q-topic").textContent = q.topic;
   document.getElementById("q-category").textContent = q.category;
   document.getElementById("q-prompt").textContent = q.prompt;
@@ -227,14 +233,31 @@ document.addEventListener("keydown", (e) => {
 // ── Stats ─────────────────────────────────────────────
 async function loadStats() {
   const stats = await api("/api/progress/stats");
+  const weakTopics = await api("/api/progress/weak-topics?threshold=60");
 
   document.getElementById("stat-accuracy").textContent = stats.accuracy + "%";
   document.getElementById("stat-total").textContent = stats.total_answered;
   document.getElementById("stat-correct").textContent = stats.total_correct;
 
+  renderWeakTopics(weakTopics, stats.total_answered);
   renderStatBars("stats-by-topic", stats.by_topic, "topic");
   renderStatBars("stats-by-difficulty", stats.by_difficulty, "difficulty");
   renderRecent(stats.recent);
+}
+
+function renderWeakTopics(items, totalAnswered) {
+  const container = document.getElementById("stats-weak-topics");
+  if (items.length === 0) {
+    const msg = totalAnswered === 0 ? "No data yet" : "No weak topics — nice work!";
+    container.innerHTML = `<p style="color:var(--text-secondary)">${msg}</p>`;
+    return;
+  }
+  container.innerHTML = items.map(item => `
+    <div class="stat-row">
+      <span class="label">${item.topic}</span>
+      <div class="bar-bg"><div class="bar-fill low" style="width:${item.accuracy}%"></div></div>
+      <span class="pct">${item.accuracy}%</span>
+    </div>`).join("");
 }
 
 function renderStatBars(containerId, items, labelKey) {
@@ -300,7 +323,7 @@ async function loadQuestionList() {
       <span class="q-prompt">${q.prompt}</span>
       <span class="q-meta">
         <span class="badge">${q.type}</span>
-        <span class="badge">${q.difficulty}</span>
+        <span class="badge difficulty-badge ${q.difficulty}">${q.difficulty}</span>
         <span class="badge">${q.topic}</span>
       </span>
     </div>
@@ -334,13 +357,15 @@ document.getElementById("code-btn-run").addEventListener("click", runCodeQuery);
 document.getElementById("code-btn-submit").addEventListener("click", submitCodeAnswer);
 document.getElementById("code-btn-clear").addEventListener("click", clearCodeEditor);
 
-// Schema toggle
-document.getElementById("code-schema-toggle").addEventListener("click", () => {
-  const content = document.getElementById("code-schema-content");
-  const arrow = document.querySelector("#code-schema-toggle .panel-arrow");
-  const hidden = content.classList.toggle("hidden");
-  arrow.textContent = hidden ? "Show" : "Hide";
+// Left-panel tabs (Description / Schema)
+document.querySelectorAll(".code-tab").forEach(tab => {
+  tab.addEventListener("click", () => switchCodeTab(tab.dataset.tab));
 });
+
+function switchCodeTab(name) {
+  document.querySelectorAll(".code-tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
+  document.querySelectorAll(".code-tab-panel").forEach(p => p.classList.toggle("active", p.id === `code-tab-${name}`));
+}
 
 // Code confidence
 document.querySelectorAll("#code-confidence button").forEach(btn => {
@@ -386,26 +411,23 @@ async function loadRandomCodeQuestion() {
 }
 
 function renderCodeQuestion(q) {
-  document.getElementById("code-q-difficulty").textContent = q.difficulty;
+  setDifficultyBadge(document.getElementById("code-q-difficulty"), q.difficulty);
   document.getElementById("code-q-topic").textContent = q.topic;
   document.getElementById("code-q-category").textContent = q.category;
   document.getElementById("code-q-prompt").textContent = q.prompt;
-
-  // Schema display
-  const schemaContent = document.getElementById("code-schema-content");
-  schemaContent.textContent = q.dataset_schema || "No schema available";
-  schemaContent.classList.remove("hidden");
-  document.querySelector("#code-schema-toggle .panel-arrow").textContent = "Hide";
+  document.getElementById("code-schema-content").textContent = q.dataset_schema || "No schema available";
+  switchCodeTab("description");
 
   // Clear editor
   document.getElementById("code-sql-editor").value = "";
 
-  // Hide results, error, feedback, confidence, next
+  // Reset console: results, error, feedback, confidence, next hidden; empty-state shown
   document.getElementById("code-results").classList.add("hidden");
   document.getElementById("code-error").classList.add("hidden");
   document.getElementById("code-feedback").classList.add("hidden");
   document.getElementById("code-confidence").classList.add("hidden");
   document.getElementById("code-btn-next").classList.add("hidden");
+  document.getElementById("code-console-empty").classList.remove("hidden");
   document.getElementById("code-btn-submit").disabled = false;
   document.getElementById("code-btn-run").disabled = false;
 
@@ -421,6 +443,7 @@ async function runCodeQuery() {
   document.getElementById("code-error").classList.add("hidden");
   document.getElementById("code-results").classList.add("hidden");
   document.getElementById("code-feedback").classList.add("hidden");
+  document.getElementById("code-console-empty").classList.add("hidden");
 
   const result = await api("/api/code/execute", {
     method: "POST",
@@ -470,6 +493,7 @@ async function submitCodeAnswer() {
 
   document.getElementById("code-btn-submit").disabled = true;
   document.getElementById("code-error").classList.add("hidden");
+  document.getElementById("code-console-empty").classList.add("hidden");
 
   const result = await api("/api/code/submit", {
     method: "POST",
@@ -511,6 +535,7 @@ function clearCodeEditor() {
   document.getElementById("code-feedback").classList.add("hidden");
   document.getElementById("code-confidence").classList.add("hidden");
   document.getElementById("code-btn-next").classList.add("hidden");
+  document.getElementById("code-console-empty").classList.remove("hidden");
   document.getElementById("code-btn-submit").disabled = false;
   document.getElementById("code-btn-run").disabled = false;
   document.getElementById("code-sql-editor").focus();

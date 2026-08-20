@@ -1,37 +1,52 @@
 /* ── Variables ─────────────────────────────────────── */
 :root {
-  --bg: #fff;
-  --bg-secondary: #f5f5f5;
-  --text: #1a1a1a;
-  --text-secondary: #666;
-  --border: #e0e0e0;
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
-  --correct: #16a34a;
-  --correct-bg: #f0fdf4;
-  --incorrect: #dc2626;
-  --incorrect-bg: #fef2f2;
-  --card-bg: #fff;
-  --header-bg: #fafafa;
-  --shadow: 0 1px 3px rgba(0,0,0,0.1);
-  --radius: 8px;
+  --bg: #ffffff;
+  --bg-secondary: #f6f6f7;
+  --text: #1c1c1e;
+  --text-secondary: #6e6e73;
+  --border: #e3e3e6;
+  --accent: #1e9e50;
+  --accent-hover: #17803f;
+  --correct: #1e9e50;
+  --correct-bg: #1e9e5014;
+  --incorrect: #e5484d;
+  --incorrect-bg: #e5484d14;
+  --card-bg: #ffffff;
+  --header-bg: #ffffff;
+  --shadow: 0 1px 2px rgba(0,0,0,0.05);
+  --radius: 6px;
+
+  /* Difficulty colors are fixed across themes, like LeetCode/NeetCode tags */
+  --diff-easy: #1e9e50;
+  --diff-easy-bg: #1e9e5020;
+  --diff-medium: #d98c00;
+  --diff-medium-bg: #d98c0020;
+  --diff-hard: #e5484d;
+  --diff-hard-bg: #e5484d20;
 }
 
 [data-theme="dark"] {
-  --bg: #1a1a2e;
-  --bg-secondary: #16213e;
-  --text: #e0e0e0;
-  --text-secondary: #a0a0a0;
-  --border: #2a2a4a;
-  --accent: #60a5fa;
-  --accent-hover: #93bbfc;
-  --correct: #4ade80;
-  --correct-bg: #14532d33;
-  --incorrect: #f87171;
-  --incorrect-bg: #7f1d1d33;
-  --card-bg: #1e1e3a;
-  --header-bg: #16162e;
-  --shadow: 0 1px 3px rgba(0,0,0,0.3);
+  --bg: #0a0a0a;
+  --bg-secondary: #151516;
+  --text: #eaeaea;
+  --text-secondary: #8b8b8f;
+  --border: #27272a;
+  --accent: #2cbb5d;
+  --accent-hover: #3fd873;
+  --correct: #2cbb5d;
+  --correct-bg: #2cbb5d1f;
+  --incorrect: #f16a6e;
+  --incorrect-bg: #f16a6e1f;
+  --card-bg: #161617;
+  --header-bg: #0a0a0a;
+  --shadow: 0 1px 3px rgba(0,0,0,0.4);
+
+  --diff-easy: #2cbb5d;
+  --diff-easy-bg: #2cbb5d26;
+  --diff-medium: #ffa116;
+  --diff-medium-bg: #ffa11626;
+  --diff-hard: #f16a6e;
+  --diff-hard-bg: #f16a6e26;
 }
 
 /* ── Base ─────────────────────────────────────────── */
@@ -49,8 +64,9 @@ body {
 header {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 0.75rem 1.5rem;
+  gap: 1.5rem;
+  padding: 0 1.5rem;
+  height: 52px;
   background: var(--header-bg);
   border-bottom: 1px solid var(--border);
   position: sticky;
@@ -59,39 +75,44 @@ header {
 }
 
 header h1 {
-  font-size: 1.1rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
 }
+
+header h1 .logo-accent { color: var(--accent); }
 
 nav {
   display: flex;
-  gap: 0.25rem;
+  gap: 1.25rem;
   flex: 1;
+  height: 100%;
 }
 
 nav button {
   background: none;
   border: none;
+  border-bottom: 2px solid transparent;
   color: var(--text-secondary);
-  padding: 0.4rem 0.75rem;
-  font-size: 0.875rem;
-  border-radius: var(--radius);
+  padding: 0 0.1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: color 0.15s, background 0.15s;
+  transition: color 0.15s, border-color 0.15s;
 }
 
-nav button:hover { color: var(--text); background: var(--bg-secondary); }
-nav button.active { color: var(--accent); background: var(--bg-secondary); }
+nav button:hover { color: var(--text); }
+nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
 
 #theme-toggle {
   background: none;
   border: 1px solid var(--border);
   color: var(--text);
-  width: 32px; height: 32px;
+  width: 30px; height: 30px;
   border-radius: var(--radius);
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.95rem;
   display: flex; align-items: center; justify-content: center;
 }
 
@@ -100,6 +121,11 @@ main {
   max-width: 800px;
   margin: 0 auto;
   padding: 2rem 1.5rem;
+  transition: max-width 0.15s;
+}
+
+main.wide {
+  max-width: 1400px;
 }
 
 .view { display: none; }
@@ -113,6 +139,11 @@ main {
   padding: 1.5rem;
   margin-bottom: 1rem;
   box-shadow: var(--shadow);
+}
+
+.card h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
 }
 
 .empty-state {
@@ -149,7 +180,7 @@ select {
   background: var(--accent);
   color: #fff;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 #btn-random:hover, #btn-next:hover { background: var(--accent-hover); }
@@ -164,12 +195,23 @@ select {
 
 .badge {
   font-size: 0.75rem;
-  padding: 0.15rem 0.5rem;
+  padding: 0.15rem 0.55rem;
   border: 1px solid var(--border);
   border-radius: 9999px;
   color: var(--text-secondary);
   text-transform: capitalize;
 }
+
+.difficulty-badge {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  border: none;
+}
+
+.difficulty-badge.easy { color: var(--diff-easy); background: var(--diff-easy-bg); }
+.difficulty-badge.medium { color: var(--diff-medium); background: var(--diff-medium-bg); }
+.difficulty-badge.hard { color: var(--diff-hard); background: var(--diff-hard-bg); }
 
 #q-prompt {
   font-size: 1.15rem;
@@ -229,7 +271,7 @@ select {
 #q-feedback.incorrect { background: var(--incorrect-bg); border: 1px solid var(--incorrect); }
 
 #q-feedback .result-label {
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 0.25rem;
 }
 
@@ -282,7 +324,13 @@ select {
   margin-top: 0.25rem;
 }
 
-#stats-by-topic, #stats-by-difficulty {
+.card-subtitle {
+  font-weight: 400;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+#stats-by-topic, #stats-by-difficulty, #stats-weak-topics {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -315,9 +363,9 @@ select {
   transition: width 0.3s;
 }
 
-.stat-row .bar-fill.low { background: var(--incorrect); }
-.stat-row .bar-fill.mid { background: #f59e0b; }
-.stat-row .bar-fill.high { background: var(--correct); }
+.stat-row .bar-fill.low { background: var(--diff-hard); }
+.stat-row .bar-fill.mid { background: var(--diff-medium); }
+.stat-row .bar-fill.high { background: var(--diff-easy); }
 
 .stat-row .pct {
   font-size: 0.875rem;
@@ -409,86 +457,99 @@ select {
   background: var(--accent);
   color: #fff;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
 }
 #code-btn-random:hover { background: var(--accent-hover); }
 
-/* Schema panel */
-#code-schema-panel {
-  margin: 1rem 0;
+/* Split-pane problem layout, NeetCode/LeetCode style */
+#code-question-container.code-split {
+  display: grid;
+  grid-template-columns: minmax(300px, 42%) 1fr;
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  background: var(--card-bg);
+  box-shadow: var(--shadow);
   overflow: hidden;
+  min-height: 70vh;
 }
 
-.panel-header {
+#code-left-panel {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem 0.75rem;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+}
+
+.code-left-tabs {
+  display: flex;
+  flex-shrink: 0;
   background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.code-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  color: var(--text-secondary);
+  padding: 0.75rem 1.25rem;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  user-select: none;
+  transition: color 0.15s, border-color 0.15s;
 }
 
-.panel-header:hover { background: var(--border); }
+.code-tab:hover { color: var(--text); }
+.code-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
-.panel-arrow {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  font-weight: 400;
+.code-tab-panel { display: none; padding: 1.25rem; }
+.code-tab-panel.active { display: block; }
+
+#code-tab-description #code-q-prompt {
+  font-size: 1rem;
+  line-height: 1.6;
+  white-space: pre-line;
 }
 
-#code-schema-content {
-  padding: 0.75rem;
-  margin: 0;
+#code-tab-schema { padding: 0; }
+
+/* Right panel: editor + console, NeetCode/LeetCode style */
+#code-right-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+#code-editor-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.editor-lang {
   font-family: "SF Mono", "Monaco", "Menlo", "Consolas", monospace;
   font-size: 0.8rem;
-  line-height: 1.5;
-  background: var(--bg);
-  color: var(--text);
-  overflow-x: auto;
-  white-space: pre;
-  border-top: 1px solid var(--border);
+  font-weight: 700;
+  color: var(--text-secondary);
 }
 
-/* SQL editor */
-#code-sql-editor {
-  width: 100%;
-  padding: 0.75rem;
-  font-family: "SF Mono", "Monaco", "Menlo", "Consolas", monospace;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-secondary);
-  color: var(--text);
-  resize: vertical;
-  tab-size: 2;
-  outline: none;
-  transition: border-color 0.15s;
-}
-
-#code-sql-editor:focus {
-  border-color: var(--accent);
-}
-
-/* Action buttons */
 #code-actions {
   display: flex;
   gap: 0.5rem;
-  margin-top: 0.75rem;
 }
 
 #code-actions button {
-  padding: 0.4rem 1rem;
+  padding: 0.35rem 0.9rem;
   border: none;
   border-radius: var(--radius);
   cursor: pointer;
-  font-weight: 500;
-  font-size: 0.875rem;
+  font-weight: 600;
+  font-size: 0.8rem;
 }
 
 .btn-primary { background: var(--accent); color: #fff; }
@@ -499,9 +560,73 @@ select {
   color: var(--text);
   border: 1px solid var(--border);
 }
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
 
-.btn-success { background: var(--correct); color: #fff; }
-.btn-success:hover { opacity: 0.9; }
+.btn-success { background: var(--accent); color: #fff; }
+.btn-success:hover { background: var(--accent-hover); }
+
+#code-editor-area {
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 200px;
+}
+
+#code-sql-editor {
+  flex: 1;
+  width: 100%;
+  padding: 0.75rem;
+  font-family: "SF Mono", "Monaco", "Menlo", "Consolas", monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  border: none;
+  background: var(--bg);
+  color: var(--text);
+  resize: none;
+  tab-size: 2;
+  outline: none;
+}
+
+/* Console: results / errors / feedback, NeetCode-style bottom panel */
+#code-console {
+  flex-shrink: 0;
+  max-height: 320px;
+  overflow-y: auto;
+  border-top: 1px solid var(--border);
+  background: var(--card-bg);
+}
+
+.console-tabs {
+  display: flex;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.console-tab {
+  padding: 0.5rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent);
+  border-bottom: 2px solid var(--accent);
+}
+
+#code-console-body { padding: 1rem; }
+
+.console-empty {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+#code-schema-content {
+  padding: 1.25rem;
+  margin: 0;
+  font-family: "SF Mono", "Monaco", "Menlo", "Consolas", monospace;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  background: transparent;
+  color: var(--text);
+  overflow-x: auto;
+  white-space: pre;
+}
 
 /* Error display */
 .code-error {
@@ -516,10 +641,14 @@ select {
   white-space: pre-wrap;
 }
 
+.code-error:first-child { margin-top: 0; }
+
 /* Results table */
 #code-results {
-  margin-top: 1rem;
+  margin-top: 0.75rem;
 }
+
+#code-results:first-child { margin-top: 0; }
 
 #code-results h4 {
   font-size: 0.9rem;
@@ -579,10 +708,12 @@ select {
 
 /* Code feedback */
 #code-feedback {
-  margin-top: 1rem;
+  margin-top: 0.75rem;
   padding: 1rem;
   border-radius: var(--radius);
 }
+
+#code-feedback:first-child { margin-top: 0; }
 
 #code-feedback.correct {
   background: var(--correct-bg);
@@ -595,7 +726,7 @@ select {
 }
 
 #code-feedback .result-label {
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 0.25rem;
 }
 
@@ -627,13 +758,26 @@ select {
   background: var(--accent);
   color: #fff;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
 }
 #code-btn-next:hover { background: var(--accent-hover); }
 
 /* ── Responsive ───────────────────────────────────── */
+@media (max-width: 900px) {
+  #code-question-container.code-split {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+  #code-left-panel {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: 45vh;
+  }
+  #code-editor-area { min-height: 260px; }
+}
+
 @media (max-width: 600px) {
-  header { padding: 0.5rem 1rem; }
+  header { padding: 0 1rem; }
   main { padding: 1rem; }
   .stats-grid { grid-template-columns: 1fr; }
 }
